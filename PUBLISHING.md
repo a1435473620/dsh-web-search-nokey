@@ -118,9 +118,7 @@ npm error  Two-factor authentication or granular access token with bypass 2fa en
 
 **这不是你的包有问题，是 npm 的强制策略**：发布必须满足 2FA。`npm login` 登录成功也没用 —— 交互式登录不会带 `bypass 2fa` 声明。
 
-### 第 0 步：先查账号到底开没开 2FA
-
-**这一步别跳。** 大概率你的账号根本没开 2FA，那样后面两条路都走不通，`--otp` 填任何值都没用（没有 2FA 就没有 OTP 可言）。
+### 第 0 步：查账号的 2FA 状态
 
 ```bash
 npm profile get
@@ -129,29 +127,60 @@ npm profile get
 看这一行：
 
 ```
-two-factor auth: disabled        ← 没开，先去开
-two-factor auth: auth-only       ← 开了，--otp 可用
-two-factor auth: auth-and-writes ← 开了，--otp 可用
+two-factor auth: disabled        ← 没开
+two-factor auth: auth-only       ← 开了
+two-factor auth: auth-and-writes ← 开了
 ```
 
-**判断依据**：如果 `--otp` 填了值仍然返回 `E403`（而不是 `EOTP`），基本就是这个原因 —— npm 的 `otplease` 走了 OTP 流程但 registry 在策略层直接拒绝；如果真是验证码错，报的会是 `EOTP` 并提示你重输。
+官方规则是**「或」的关系**，满足任意一条即可发布：
 
-**先开 2FA**：<https://www.npmjs.com/settings/你的用户名/profile> → **Two-Factor Authentication** → **Enable 2FA**。
-启用时选 **Authenticator app（TOTP）**，用 Google Authenticator / 1Password / Authy 扫二维码。
+> Publishing to npm requires **either**: Two-factor authentication (2FA) enabled on your account, **or** a granular access token with bypass 2FA enabled.
 
-> **不要只绑安全密钥（WebAuthn）。** `--otp=` 需要一个人手能输的六位数字，硬件密钥产生不了这个码 —— 只绑硬件密钥的账号在终端里无法满足 2FA，只能走路线 B。
->
-> 顺便把 recovery codes 存好。
+所以账号显示 `disabled` 也**不代表走不通** —— 直接去建 bypass-2FA 的 token（路线 B）就行，不用先开账号级 2FA。
 
-开完之后，两条路选一条：
+**什么时候才需要开 2FA**：只有你想用 `--otp=` 参数发布时才需要。`--otp` 依赖认证器 App 生成的六位动态码，账号没开 2FA 就没有这个码，填任何值都会失败。
 
-**路线 A：发布时带 OTP**（最简单，每次输一次码）
+**判断 `--otp` 为什么失败**：
+
+| 现象 | 原因 |
+| --- | --- |
+| 报 `EOTP`，提示重输 | 验证码错了或过期，重取一个 |
+| 报 `E403`（不是 EOTP） | 账号没开 2FA，`--otp` 无从满足 |
+| 报 `E403` 且 2FA 已开 | 检查是不是被包级别的发布策略挡住了 |
+
+> 排查手段：`npm publish` 失败时看 debug 日志的调用栈，
+> 有 `at async otplease (npm/lib/utils/auth.js)` 说明 npm 走了 OTP 流程，
+> 那么拿到的如果是 `E403` 而不是 `EOTP`，就是账号没开 2FA。
+
+### ⚠️ 恢复码（recovery codes）不能当 OTP 用
+
+启用 2FA 时 npm 会给一组恢复码。**它不是动态码，不能填进 `--otp=`。**
+
+恢复码的用途只有一个：**丢失 2FA 设备时用来登录账号**。而且用一次就会触发：
+
+> npm places a **temporary 72-hour security hold** on your account. While the security hold is active, you can log in and install packages… **You cannot: Publish or unpublish packages. Create access tokens.**
+
+**用恢复码换来的登录态在 72 小时内禁止发布。** 拿它去试发布不仅不work，还会把自己锁在门外三天。
+
+正确做法：
+
+- 要动态码 → 从**认证器 App**（Google Authenticator / 1Password / Authy）读取当前的六位数字
+- 恢复码 → **离线存好**（密码管理器），只在丢设备救命时用
+
+> 恢复码一旦泄露（贴到聊天里、提交进 git、发截图），去
+> Account → Two-Factor Authentication → Modify 2FA → **Manage Recovery Codes → Regenerate Code**
+> 重新生成一组，**旧的全部立即失效**。
+
+两条发布路线：
+
+**路线 A：`--otp=` + 认证器 App**（需要账号已开 2FA）
 
 ```bash
 npm publish --access public --otp=你认证器App上当前的六位码
 ```
 
-> 注意 `--otp=` 后面是**真实动态码**，不是 `123456` 这种示例数字。通常 30 秒一变，过期了重取一个。
+> `--otp=` 后面是**真实动态码**，不是示例数字。通常 30 秒一变，过期了就重取。
+> **不要只绑安全密钥（WebAuthn）**：`--otp=` 需要人手能输的六位数，硬件密钥产生不了，账号只绑硬件密钥的话这条路走不通，用路线 B。
 
 > 注意：**WebAuthn 安全密钥不行**。`--otp` 要的是一个能手输的六位数字，硬件密钥产生不了这个码。账号只绑了安全钥匙的话，终端里没法满足 2FA，只能走路线 B。
 
