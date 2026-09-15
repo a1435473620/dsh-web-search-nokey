@@ -1,6 +1,6 @@
 # 发布指引 / Publishing
 
-怎么把这个仓库推到公开 GitHub，让它被各个 DSH 插件市场收录。
+怎么把这个仓库推到公开 GitHub，并让各个 DSH 插件市场收录它。
 
 How to get this repository onto public GitHub so the DSH marketplaces pick it up.
 
@@ -10,9 +10,7 @@ How to get this repository onto public GitHub so the DSH marketplaces pick it up
 
 所有 DSH 插件市场（dsh.market、dsh-plugin.org、dsh.so、dshpluginhub.ai、awesome-dsh-plugin……）**共用同一套发现机制：GitHub 仓库加 `dsh-plugin` topic，定时任务每日扫描。**
 
-没有人工投稿，没有审核费，没有必须填的表单。
-
-**唯一必须做对的一步就是加 topic。** 漏了它，仓库再规范也不会被任何市场识别。
+没有人工投稿，没有审核费，没有必须填的表单。**唯一必须做对的一步就是加 topic。**
 
 Every DSH marketplace uses the same mechanism: a public GitHub repo carrying the `dsh-plugin` topic, swept daily by a crawler. No submission, no fee. The topic is the one step that matters.
 
@@ -20,54 +18,60 @@ Every DSH marketplace uses the same mechanism: a public GitHub repo carrying the
 
 ## 第 0 步：替换占位符 / Step 0 — replace the placeholders
 
-四处的 `YOUR-GITHUB-USERNAME` / `<COPYRIGHT HOLDER>` 要换成你自己。
-
-There are four to replace.
-
-| 文件 | 内容 |
-| --- | --- |
-| `package.json` | `author`、`repository.url`、`homepage`、`bugs.url` |
-| `README.md` | 安装命令里的 `github:YOUR-GITHUB-USERNAME/...` |
-| `LICENSE` | `Copyright (c) 2026 <COPYRIGHT HOLDER>` |
+仓库里有 6 处占位符（`package.json` 4 处、`README.md` 1 处、`LICENSE` 1 处）。有一个脚本一次改完：
 
 ```bash
-# 换成你的 GitHub 用户名
-OWNER=your-github-name
-
-sed -i "s/YOUR-GITHUB-USERNAME/$OWNER/g" package.json README.md
-sed -i "s/<COPYRIGHT HOLDER>/$OWNER/" LICENSE
-
-grep -rn "YOUR-GITHUB-USERNAME\|COPYRIGHT HOLDER" . --exclude-dir=.git   # 应该没有输出
+node <path-to>/prepare-push.mjs <你的GitHub用户名>
 ```
+
+Windows 上直接双击 `PREPARE-PUSH.cmd` 也行，会提示你输入用户名。
+
+不改的话 README 里的安装命令是坏的，而市场扫描器会检查"README 里有可复制的安装命令"这一条。
+
+`PUBLISHING.md` 本身不参与替换——它就是讲这件事的，里面的占位符是示例。
+
+Six placeholders live in the repo. The script above replaces all of them. Until it runs, the install command in the README is broken and the crawler's "README contains a copyable install command" check fails.
 
 ---
 
 ## 第 1 步：建仓库推上去 / Step 1 — create and push
 
-本地已经 `git init` 并提交好了（`main` 分支）。
+本地已经 `git init` 过并提交好了（`main` 分支）。
 
-### 装了 `gh`
+先在 <https://github.com/new> 建一个**空的公开仓库**，名字 `dsh-web-search-nokey`。
+**不要勾选** README / .gitignore / LICENSE —— 本地已经有了，勾了会冲突。
 
-```bash
-gh repo create dsh-web-search-nokey --public --source=. --push \
-  --description "Keyless web search for DeepSeek Harness — for credits-based setups where web_search otherwise 401s forever"
+### 用 TortoiseGit
 
-gh repo edit --add-topic dsh-plugin --add-topic deepseek-harness \
-  --add-topic web-search --add-topic no-api-key
-```
+1. 打开 `D:\BugBounty\_work\dsh-web-search-nokey`，在文件夹空白处右键
+2. **TortoiseGit → 设置（Settings）→ Git → 远端（Remote）**
+   - 名称：`origin`
+   - URL：`https://github.com/<你的用户名>/dsh-web-search-nokey.git`
+   - 保存
+3. 回到文件夹右键 → **TortoiseGit → 推送（Push）**
+   - 远端选 `origin`，本地分支 `main`
+   - 确定
+4. 首次会弹 GitHub 认证，登录一次即可
 
-### 用网页
+（也可以在推送对话框里点远端下拉框旁边的"管理…"直接加远端，效果一样。）
 
-1. 打开 <https://github.com/new>
-2. 仓库名 `dsh-web-search-nokey`，**Public**，**不要**勾任何初始化选项（本地已经有 README/LICENSE 了）
-3. 然后：
+### 用命令行
 
 ```bash
 git remote add origin https://github.com/<你的用户名>/dsh-web-search-nokey.git
 git push -u origin main
 ```
 
-4. 进仓库页面，右侧 **About** 旁边的齿轮 → **Topics**，填：
+> 推送慢或失败，先确认代理在跑（`netstat -ano | findstr :7897`），再
+> `git config --global http.proxy http://127.0.0.1:7897`（用完记得 `--unset`）。
+
+---
+
+## 第 2 步：加 topic / Step 2 — add the topic
+
+**TortoiseGit 做不了这步，必须在 GitHub 网页上操作。**
+
+进仓库页面 → 右侧 **About** 旁边的齿轮 → **Topics**，填：
 
 ```
 dsh-plugin
@@ -78,21 +82,50 @@ trae
 workbuddy
 ```
 
-**`dsh-plugin` 是必须的那个。** 其余只是给人看的分类线索。
+`dsh-plugin` 是必须的那个，其余只是分类线索。**漏了它，仓库再规范也不会被任何市场扫到。**
 
-> 推送慢或失败，先确认代理在跑（`netstat -ano | findstr :7897`），再
-> `git config --global http.proxy http://127.0.0.1:7897`（用完 `--unset`）。
+This one has no shortcut. It is the only thing the crawlers look at.
 
 ---
 
-## 第 2 步：等扫描 / Step 2 — wait for the sweep
+## 第 3 步：等扫描 / Step 3 — wait
 
-- 各市场的抓取任务每天跑一遍
-- 首次收录一般 24 小时内
+- 各市场抓取任务每天跑一遍，首次收录一般 24 小时内
 - 新收录状态是 **unconfirmed**；社区手动验过兼容性才变 **verified**
-- 之后 stars、更新时间、README 都会自动同步，不用重新提交
+- 之后 stars、更新时间、README 自动同步，不用重新提交
 
 想确认收没收到，直接在各市场站内搜 `dsh-web-search-nokey`。
+
+---
+
+## 可选：发到 npm / Optional — publish to npm
+
+不发也能装（`github:` 规格就够）。发 npm 的好处是安装命令更短、有版本号可锁。
+
+包名 `dsh-web-search-nokey` 在 npm 上**没被占用**（已查，返回 404）。
+
+```bash
+npm login            # 浏览器登录一次，之后本机就有凭据了
+npm publish --access public
+```
+
+发完之后安装命令从
+
+```bash
+dsh plugin --profile web add github:<user>/dsh-web-search-nokey
+```
+
+变成
+
+```bash
+dsh plugin --profile web add dsh-web-search-nokey
+```
+
+注意：**不是 `npm install -g`**。这是 dsh 的插件，要装进 profile 才有用，`dsh plugin` 会转发给 pnpm 装到 `<DSH_HOME>/profiles/web/`。
+
+需要重新发布时，先改 `package.json` 的 `version` 再 `npm publish` —— npm 不允许覆盖已发布的版本号。
+
+Note this is a dsh plugin, not a global CLI: `npm install -g` does nothing useful. `dsh plugin` forwards to pnpm and installs into the profile.
 
 ---
 
@@ -102,41 +135,33 @@ workbuddy
 - [ ] **Topics 含 `dsh-plugin`** ← 只有这步要你操作
 - [x] README 里有可复制的安装命令
 - [x] 模块导出 `apply(ctx)`
-- [x] 没有 `prepare` / `postinstall` 脚本 —— 纯 JS，装的时候不跑任何构建
+- [x] 没有 `prepare` / `postinstall` 脚本 —— 纯 JS，装的时候不跑构建
 
 最后一条是有用的。有些市场用 `pnpm add --ignore-scripts` 装，碰到需要跑构建脚本的插件会拒绝一键安装、要你逐字审脚本再手动同意。这个包没有构建步骤，所以是干净的一键安装项。
 
-Worth knowing: some markets install with `pnpm add --ignore-scripts` and refuse one-click install for plugins that need a build script. This package has no build step, so it installs cleanly.
-
 ---
 
-## 可选：发 npm / Optional — publish to npm
+## 改完插件代码之后 / After editing the plugin
 
-不必需，`github:` 规格已经能装。发 npm 只是安装命令更短。
+**必须重新打包再重装**，否则跑的还是旧的那份 —— profile 里装的不是符号链接，是 tarball 解包出来的副本。
 
 ```bash
-npm publish --access public
+npx pnpm pack
+dsh plugin --profile web add ./dsh-web-search-nokey-1.0.0.tgz
 ```
 
-之后安装命令变成 `dsh plugin --profile web add dsh-web-search-nokey`。
+别用 `link:` 图省事：pnpm 在 Windows 上把它按"相对项目目录"解释，会造出指向 `<profile>/D:/...` 的坏符号链接。
 
 ---
 
 ## 发布前自查 / Before you push
 
 ```bash
-npm run smoke                                                # 模块契约 + 补丁一致性 + 一次联网真查
-cd ~/.dsh/profiles/web && node <repo>/test/with-seam.mjs     # 真实 seam 集成
-npx pnpm pack                                                # 看 files 白名单，确认 tgz 内容
+npm run smoke                                            # 模块契约 + 补丁一致性 + 一次联网真查
+
+cd ~/.dsh/profiles/web                                   # 需要已安装本插件
+node <repo>/test/with-seam.mjs                           # 真实 ctx.web 选择
+node <repo>/test/with-tool-layer.mjs                     # 真实 web_search 工具
+
+npx pnpm pack                                            # 看 files 白名单
 ```
-
-**另外，改完插件源码后记得重装**，否则跑的还是旧的那份：
-
-```bash
-cd <repo> && npx pnpm pack
-dsh plugin --profile web add ./dsh-web-search-nokey-1.0.0.tgz
-```
-
-这一点很关键：插件是从 tarball 解包装进 profile 的，改源码不会自动同步。想省事就改成 `link:`——但 pnpm 的 `link:` 在 Windows 上会把路径按相对目录解释，造出坏链接，不建议。
-
-The installed copy is extracted from a tarball, so editing the source does nothing until you repack and reinstall. Do not reach for `link:` as a shortcut — on Windows pnpm resolves it relative to the project directory and creates a broken symlink.

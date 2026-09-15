@@ -34,9 +34,19 @@ This plugin swaps the search backend for public search engines. No key anywhere.
 dsh plugin --profile web add github:YOUR-GITHUB-USERNAME/dsh-web-search-nokey
 ```
 
+发到 npm 之后也可以用短名字：
+
+```bash
+dsh plugin --profile web add dsh-web-search-nokey
+```
+
 装完就生效，不用改配置，也不用重启。
 
+注意不是 `npm install -g` —— 这是 dsh 的插件，要装进 profile 才有用。
+
 It takes effect right away. Nothing to configure, nothing to restart.
+
+Not `npm install -g`: this is a dsh plugin and belongs in the profile.
 
 想卸载 / To remove:
 
