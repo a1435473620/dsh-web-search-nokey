@@ -28,12 +28,6 @@ dsh 里聊天和搜索不是一条路。聊天走你配置的连接器，搜索�
 dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
 ```
 
-发到 npm 之后也可以写短名：
-
-```
-dsh plugin --profile web add dsh-web-search-nokey
-```
-
 装完就生效，不用改配置，也不用重启。不是 `npm install -g` —— 这是 dsh 插件，要装进 profile。
 
 卸载：
@@ -76,12 +70,6 @@ dsh 的搜索后端同一时间只能选一个。不显式指定，它会去数�
 - 走的是公开搜索页，不是官方接口。调太猛可能被限流；日志里会记 `engine=xxx failed`，然后自动换下一个后端。
 - 搜不到就是空列表，不报错。
 
-### 和 dsh-free-search 怎么选
-
-[DDDMUC/dsh-free-search](https://github.com/DDDMUC/dsh-free-search) 是功能更全的那类：多引擎、设置页、时间过滤、平台搜索。你要的是可配置搜索中枢，去那边。
-
-这个仓库只做一件事：积分用户搜不了 → 装上就能搜。没有 UI，没有账号，没有额外工具，依赖为零。
-
 ### 兼容性
 
 dsh 0.1.5-rc.2、`web` profile、Windows 上实测过。Node 22 和 24 都跑过。
@@ -104,12 +92,6 @@ This plugin registers a credential-free `WebSearchProvider` on `ctx.web`. Querie
 
 ```
 dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
-```
-
-After it's on npm, the short name works too:
-
-```
-dsh plugin --profile web add dsh-web-search-nokey
 ```
 
 Takes effect immediately. Not `npm install -g`: this is a dsh plugin and belongs in the profile.
@@ -153,12 +135,6 @@ Environment variables override the same fields with the `DSH_WEB_SEARCH_NOKEY_` 
 - The 360 backend returns redirect links that only resolve on click. It's a fallback.
 - Public result pages, not an official API. Heavy use may get rate-limited; failures log as `engine=xxx failed` and the next backend is tried.
 - An empty result set is an empty list, not an error.
-
-### Versus dsh-free-search
-
-[dsh-free-search](https://github.com/DDDMUC/dsh-free-search) is the bigger plugin: multi-engine UI, time filters, platform search. Use that if you want a configurable search hub.
-
-This one only solves one problem: credits-based setups cannot search → install and they can. No UI, no accounts, no extra tools, zero dependencies.
 
 ### Compatibility
 
