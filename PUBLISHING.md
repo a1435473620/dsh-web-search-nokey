@@ -133,27 +133,38 @@ npm publish --access public --otp=123456
 
 **路线 B：Granular Access Token + 勾选 Bypass 2FA**（一次配好，之后免 OTP）
 
-1. 打开 <https://www.npmjs.com/settings/你的用户名/tokens>
-2. **Generate New Token → Granular Access Token**
-3. 填：
+1. 直接开这个地址（比点菜单快）：
+   <https://www.npmjs.com/settings/你的用户名/tokens/granular-access-tokens/new>
+   或者：头像 → **Access Tokens** → **Generate New Token** → **Granular Access Token**
+2. 填：
 
 | 字段 | 填什么 |
 | --- | --- |
 | Token name | 随便，比如 `publish-dsh-web-search-nokey` |
+| Description | 可选 |
 | **Bypass two-factor authentication (2FA)** | **必须勾上** ← 默认是**不勾**的，忘了勾就会继续报 E403/EOTP |
-| Packages and scopes | **Read and write**，且**必须把 `dsh-web-search-nokey` 选进去** |
+| Allowed IP ranges | 留空（除非你固定在某个 IP 段发布） |
+| **Packages and scopes → Permissions** | **`Read and write (publish and stage)`** |
+| **Packages and scopes → Select Packages** | 见下面那条，**首次发布只能选 `All Packages`** |
+| Organizations | 个人包不用管 |
 | Expiration | 按需，比如 90 天 |
 
-4. 生成后**立刻复制**（只显示一次），然后：
+3. **Packages and scopes 这块在页面中部**，是两级控件：
+   - 上面一个 **Permissions** 下拉（`No access` / `Read-only` / `Read and write (publish and stage)` / `Read and write (stage only)`）
+   - 下面 **Select Packages** 二选一：**All Packages** 或 **Only select packages and scopes**；选后者会**再出现一个下拉菜单**，从里面挑具体包
+
+   > **首次发布注意**：那个下拉菜单列的是**你账号已经有权限的包**。本包还没发布过（查过 registry，404），所以它**不在列表里**——你没法选中它。这种情况选 **`All Packages`**。等包发布过之后，如果你在意权限收窄，可以再建一个只限定到本包的 token。
+   >
+   > 另外 token 必须限定到你实际要发的包：用限定给 A 包的 token 去发 B 包，返回的 403 和 2FA 那个长得一模一样，极难排查。
+
+4. 生成后**立刻复制**（只显示一次，`npm_` 开头），然后：
 
 ```bash
 npm config set //registry.npmjs.org/:_authToken "刚复制的token"
 npm publish --access public
 ```
 
-> 两个坑：
-> - Bypass 2FA **默认不勾**，这是最常见的翻车点。
-> - token 必须**限定到这个包**。用限定给 A 包的 token 发 B 包，返回的 403 和 2FA 那个长得一模一样，很难查。
+> **首次发布其实更推荐路线 A。** Granular token 是为 CI 自动化设计的，首次发一个新包时它有上面那些"包还不存在"的边角情况；`--otp` 一个参数就绕过去了，不用跟 token 作用域纠缠。
 
 **另外**：npm 已经公告，bypass-2FA token 的**直接发布能力将在 2027 年 1 月移除**，官方替代方案是基于 OIDC 的 trusted publishing（从 CI 发）。个人偶尔发一版的话，现在用哪种都行。
 
