@@ -31,7 +31,7 @@ This plugin swaps the search backend for public search engines. No key anywhere.
 ## 装 / Install
 
 ```bash
-dsh plugin --profile web add github:YOUR-GITHUB-USERNAME/dsh-web-search-nokey
+dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
 ```
 
 发到 npm 之后也可以用短名字：

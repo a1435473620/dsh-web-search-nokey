@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Keyless web search for DeepSeek Harness. Fixes the web_search 401 on credits-based setups (Trae, WorkBuddy) without an API key.",
   "license": "MIT",
-  "author": "YOUR-GITHUB-USERNAME",
+  "author": "a1435473620",
   "type": "module",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -48,10 +48,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR-GITHUB-USERNAME/dsh-web-search-nokey.git"
+    "url": "git+https://github.com/a1435473620/dsh-web-search-nokey.git"
   },
-  "homepage": "https://github.com/YOUR-GITHUB-USERNAME/dsh-web-search-nokey#readme",
+  "homepage": "https://github.com/a1435473620/dsh-web-search-nokey#readme",
   "bugs": {
-    "url": "https://github.com/YOUR-GITHUB-USERNAME/dsh-web-search-nokey/issues"
+    "url": "https://github.com/a1435473620/dsh-web-search-nokey/issues"
   }
 }
