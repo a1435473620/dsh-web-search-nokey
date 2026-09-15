@@ -1,0 +1,46 @@
+# dsh-web-search-nokey — bundle patch layer.
+#
+# This file is applied AFTER the base and mode bundles, so the rows below win
+# over the `web` row declared in `@deepseek-ai/dsh-base`.
+#
+# Two things happen here.
+#
+# 1. The `web` seam is told which search provider to use.
+#    Naming one explicitly is what keeps selection deterministic. The shipped
+#    `deepseek-official` provider reports `available() === true` unconditionally
+#    — `resolveApiKey` is always a function, so the "has a key" half of its
+#    check can never fail. Per the seam's selection rules, two usable providers
+#    with no id configured is `WEB_PROVIDER_AMBIGUOUS`, not a coin flip. So a
+#    plugin that merely registers a second provider breaks search for everyone
+#    who already had it working. Pinning the id here is the fix.
+#
+# 2. The plugin is inserted.
+#
+# Note: a patch replaces the targeted row's whole `config`; it does not merge
+# into it. `fetchProvider: http` is restated below only because of that — drop
+# it and fetch would have no provider at all.
+#
+# Not done here: disabling `web-search-deepseek`. With the id pinned, that row
+# is inert, and leaving it in place means anyone holding a working DeepSeek key
+# can switch back by editing this one line. Disable it only if you want a
+# cleaner tree:
+#
+#   - id: web-search-deepseek
+#     disabled: true
+
+- id: web
+  config:
+    searchProvider: dsh-web-search-nokey
+    fetchProvider: http
+
+- insert:
+    - id: dsh-web-search-nokey
+      name: dsh-web-search-nokey
+
+      # Defaults are compiled in; uncomment to change per profile.
+      #
+      # engines: [bing-rss, bing-html, so360]  # order = fallback order
+      # maxResults: 8                          # upper bound, also capped by the seam
+      # timeoutMs: 12000                       # per upstream request
+      # proxy: ''                              # e.g. http://127.0.0.1:7897
+      # userAgent: ''                          # override the desktop Chrome UA

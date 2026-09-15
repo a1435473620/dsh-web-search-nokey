@@ -1,0 +1,8 @@
+# Normalize to LF in the repository regardless of the committer's platform.
+# These are plain ESM and Markdown files; CRLF in them only ever causes noise.
+* text=auto eol=lf
+
+# Keep binaries binary.
+*.tgz binary
+*.png binary
+*.ico binary

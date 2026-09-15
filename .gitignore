@@ -1,0 +1,19 @@
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# packed artifacts
+*.tgz
+
+# local scratch
+.backup/
+dump-config.txt
+.resolve-probe.mjs
+.integ-probe.mjs
+*.log
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
