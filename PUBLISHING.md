@@ -131,21 +131,34 @@ Note this is a dsh plugin, not a global CLI: `npm install -g` does nothing usefu
 
 ---
 
-## 关于中英文切换 / About the language switcher
+## 关于中英文 / About the two languages
 
-**GitHub 没有 README 语言切换器这个功能。** 官方文档里关于多 README 只说了一句：它按 `.github` → 根目录 → `docs` 的顺序挑一个渲染，其余的一律不管。文档通篇没有 locale / 多语言 / 切换的任何说法。
+**GitHub 没有 README 语言切换器这个功能。** 官方文档里关于多 README 只说了一句：它按 `.github` → 根目录 → `docs` 的顺序挑一个渲染，其余的一律不管。通篇没有 locale / 多语言 / 切换的任何说法。
 
-所以你在别人仓库看到的「English · 中文」，都是**作者手写的一行链接**，不是 GitHub 给的 UI。
+所以你在别人仓库看到的「中文 · English」，都是**作者手写的一行链接**，不是 GitHub 给的 UI。
 
-这个仓库的做法：
+写法就一种，抄这个：
 
-- `README.md` —— 中文
-- `README.en.md` —— 英文
-- 两份文件的第一行各有一段互链，那是唯一的切换入口
+```markdown
+[中文](#中文) · [English](#english)
 
-再加语言时，**必须在所有 README 变体的切换行里都补上**。这是最容易漏的一步：只在新文件里写，老文件的读者永远发现不了新语言。GitHub 不会替你同步。
+## 中文
 
-GitHub has no README language switcher. The switcher line people see on other repos is hand-written links. Keep every README variant's line in sync — GitHub will not do it for you.
+……中文内容……
+
+## English
+
+……English content……
+```
+
+要点：
+
+- **一个 README.md 装两种语言**，分两个 `##` 区块，顶部一行锚点互跳。不是两份文件，也不是段落交替
+- 锚点就是标题本身：`## 中文` → `#中文`，`## English` → `#english`
+- 好处是只有一份文件要维护，而且读者挑完语言能线性读完，不用来回跳
+- **共享的部分（比如 License）放在两个区块外面**，别抄两遍
+
+GitHub has no README language switcher. The line people see on other repos is hand-written anchor links. One file, two `##` blocks, a link line at the top — that is the whole mechanism.
 
 ---
 
