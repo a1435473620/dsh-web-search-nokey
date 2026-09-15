@@ -40,6 +40,16 @@ check('exports name / inject / apply', () => {
   assert.equal(typeof plugin.apply, 'function');
 });
 
+check('has no default export', () => {
+  // The loader normalizes module shapes with `exports = exports.default ?? exports`,
+  // so a default export shadows the namespace. A bare `apply` carries no `inject`,
+  // and the plugin then dies on its first service access with
+  // `cannot get property "web" without inject` — taking the entire plugin tree
+  // down, so `dsh web` will not start at all. Both shipped providers next to this
+  // one export zero defaults, for the same reason.
+  assert.ok(!('default' in plugin), 'remove `export default` from lib/index.js');
+});
+
 console.log('\nregistration');
 let registered = null;
 const fakeContext = {

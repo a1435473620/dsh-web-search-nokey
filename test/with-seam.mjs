@@ -27,7 +27,21 @@ const QUERY = process.argv[2] ?? 'DeepSeek Harness plugin';
 
 const ctx = new Context();
 ctx.plugin(WebRuntime, { searchProvider: plugin.PROVIDER_ID, fetchProvider: 'http' });
-await ctx.plugin(plugin, {});
+
+// Mirror the loader's module-shape normalization exactly:
+//     exports = exports.default ?? exports
+// Registering the *unwrapped* value is what makes this test able to catch a
+// stray `export default`. Handing `ctx.plugin` the raw namespace would hide it,
+// which is how the original version of this suite shipped a plugin that could
+// not boot.
+const loaderPlugin = plugin.default ?? plugin;
+if (loaderPlugin !== plugin) {
+  throw new Error(
+    'lib/index.js exports a default — the loader will use it instead of the namespace, ' +
+      'and the bare `apply` has no `inject`. Remove `export default`.',
+  );
+}
+await ctx.plugin(loaderPlugin, {});
 
 const web = ctx.get('web');
 if (!web) throw new Error('ctx.web was not installed');

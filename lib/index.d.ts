@@ -95,4 +95,3 @@ export interface MinimalContext {
 }
 
 export declare function apply(ctx: MinimalContext, config?: NokeySearchConfig): void;
-export default apply;
