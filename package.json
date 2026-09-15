@@ -2,7 +2,7 @@
   "name": "dsh-web-search-nokey",
   "displayName": "DSH Web Search (No Key)",
   "version": "1.0.0",
-  "description": "Keyless web search provider for DeepSeek Harness. For setups whose chat model comes from platform credits — Trae credits, WorkBuddy credits — where web_search otherwise 401s forever.",
+  "description": "Keyless web search for DeepSeek Harness. Fixes the web_search 401 on credits-based setups (Trae, WorkBuddy) without an API key.",
   "license": "MIT",
   "author": "YOUR-GITHUB-USERNAME",
   "type": "module",
