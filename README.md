@@ -69,7 +69,7 @@ sources : 8   truncated=false
 ## 安装
 
 ```bash
-dsh plugin --profile web add github:YOU/dsh-web-search-nokey
+dsh plugin --profile web add github:YOUR-GITHUB-USERNAME/dsh-web-search-nokey
 ```
 
 装完直接生效，不用改任何配置文件，也不用重启 —— `dsh plugin` 会把声明了 `dsh.bundle.patch` 的依赖自动追加进 profile 的 `dsh.profile.bundles`，位置排在 `@deepseek-ai/dsh-web-app` 之后，所以补丁层天然压过内置配置。
@@ -96,6 +96,19 @@ dsh --profile web --dump-config | grep -A4 "id: web$"
 ```bash
 dsh plugin --profile web remove dsh-web-search-nokey
 ```
+
+---
+
+## 兼容性
+
+| 项 | 值 |
+| --- | --- |
+| dsh | 在 `0.1.5-rc.2`（web profile）上实测 |
+| Node | `^22.19.0 \|\| >=24.0.0`（跟 dsh 自己一致），实测 Node 24.19.0 与 22.22.2 |
+| profile | `web`。`desktop` 也能装，同一套 bundle 机制 |
+| 平台 | 实测 Windows。代码里没有平台相关分支 |
+
+`apply(ctx)` 的签名是稳定的，但 dsh 还在 preview，`ctx` 上挂的能力会变。如果哪天 `ctx.web` 的接口动了，这个插件会以插件加载失败的形式报出来，不会静默降级。
 
 ---
 

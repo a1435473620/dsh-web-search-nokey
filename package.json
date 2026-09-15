@@ -2,8 +2,9 @@
   "name": "dsh-web-search-nokey",
   "displayName": "DSH Web Search (No Key)",
   "version": "1.0.0",
-  "description": "Keyless multi-engine web search provider for DeepSeek Harness (ctx.web). Aimed at setups whose chat model comes from platform credits — Trae credits, WorkBuddy credits — where chat runs fine but web_search has no usable DeepSeek key.",
+  "description": "Keyless web search provider for DeepSeek Harness. For setups whose chat model comes from platform credits — Trae credits, WorkBuddy credits — where web_search otherwise 401s forever.",
   "license": "MIT",
+  "author": "YOUR-GITHUB-USERNAME",
   "type": "module",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -33,17 +34,25 @@
     "web-search",
     "search-provider",
     "no-api-key",
-    "browserless",
     "trae",
     "workbuddy",
     "credits"
   ],
   "scripts": {
-    "smoke": "node test/smoke.mjs"
+    "smoke": "node test/smoke.mjs",
+    "test:seam": "node test/with-seam.mjs"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR-GITHUB-USERNAME/dsh-web-search-nokey.git"
+  },
+  "homepage": "https://github.com/YOUR-GITHUB-USERNAME/dsh-web-search-nokey#readme",
+  "bugs": {
+    "url": "https://github.com/YOUR-GITHUB-USERNAME/dsh-web-search-nokey/issues"
   }
 }

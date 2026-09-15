@@ -69,7 +69,7 @@ sources : 8   truncated=false
 ## Install
 
 ```bash
-dsh plugin --profile web add github:YOU/dsh-web-search-nokey
+dsh plugin --profile web add github:YOUR-GITHUB-USERNAME/dsh-web-search-nokey
 ```
 
 It takes effect immediately. No config to edit, no restart: `dsh plugin` appends any dependency declaring `dsh.bundle.patch` to the profile's `dsh.profile.bundles`, positioned after `@deepseek-ai/dsh-web-app`, so the patch layer wins over the built-in configuration by construction.
@@ -96,6 +96,19 @@ Remove it with:
 ```bash
 dsh plugin --profile web remove dsh-web-search-nokey
 ```
+
+---
+
+## Compatibility
+
+| | |
+| --- | --- |
+| dsh | Verified on `0.1.5-rc.2`, `web` profile |
+| Node | `^22.19.0 \|\| >=24.0.0`, matching the harness. Tested on 24.19.0 and 22.22.2 |
+| Profile | `web`. `desktop` works too — same bundle mechanism |
+| Platform | Verified on Windows. There is no platform-specific code |
+
+The `apply(ctx)` signature is stable, but dsh is still a preview and the capabilities hanging off `ctx` do move between releases. If `ctx.web`'s interface changes, this plugin fails loudly at load rather than degrading quietly.
 
 ---
 
