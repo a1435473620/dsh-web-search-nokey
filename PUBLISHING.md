@@ -118,16 +118,40 @@ npm error  Two-factor authentication or granular access token with bypass 2fa en
 
 **这不是你的包有问题，是 npm 的强制策略**：发布必须满足 2FA。`npm login` 登录成功也没用 —— 交互式登录不会带 `bypass 2fa` 声明。
 
-两条路，选一条：
+### 第 0 步：先查账号到底开没开 2FA
 
-**路线 A：装个认证器 App，发布时带 OTP**（最简单，每次都要输码）
-
-1. npmjs.com → Account → Two-Factor Authentication → 启用 **TOTP**（用 Google Authenticator / 1Password 之类扫二维码）
-2. 发布时：
+**这一步别跳。** 大概率你的账号根本没开 2FA，那样后面两条路都走不通，`--otp` 填任何值都没用（没有 2FA 就没有 OTP 可言）。
 
 ```bash
-npm publish --access public --otp=123456
+npm profile get
 ```
+
+看这一行：
+
+```
+two-factor auth: disabled        ← 没开，先去开
+two-factor auth: auth-only       ← 开了，--otp 可用
+two-factor auth: auth-and-writes ← 开了，--otp 可用
+```
+
+**判断依据**：如果 `--otp` 填了值仍然返回 `E403`（而不是 `EOTP`），基本就是这个原因 —— npm 的 `otplease` 走了 OTP 流程但 registry 在策略层直接拒绝；如果真是验证码错，报的会是 `EOTP` 并提示你重输。
+
+**先开 2FA**：<https://www.npmjs.com/settings/你的用户名/profile> → **Two-Factor Authentication** → **Enable 2FA**。
+启用时选 **Authenticator app（TOTP）**，用 Google Authenticator / 1Password / Authy 扫二维码。
+
+> **不要只绑安全密钥（WebAuthn）。** `--otp=` 需要一个人手能输的六位数字，硬件密钥产生不了这个码 —— 只绑硬件密钥的账号在终端里无法满足 2FA，只能走路线 B。
+>
+> 顺便把 recovery codes 存好。
+
+开完之后，两条路选一条：
+
+**路线 A：发布时带 OTP**（最简单，每次输一次码）
+
+```bash
+npm publish --access public --otp=你认证器App上当前的六位码
+```
+
+> 注意 `--otp=` 后面是**真实动态码**，不是 `123456` 这种示例数字。通常 30 秒一变，过期了重取一个。
 
 > 注意：**WebAuthn 安全密钥不行**。`--otp` 要的是一个能手输的六位数字，硬件密钥产生不了这个码。账号只绑了安全钥匙的话，终端里没法满足 2FA，只能走路线 B。
 
