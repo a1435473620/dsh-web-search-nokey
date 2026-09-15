@@ -18,7 +18,9 @@ Every DSH marketplace uses the same mechanism: a public GitHub repo carrying the
 
 ## 第 0 步：替换占位符 / Step 0 — replace the placeholders
 
-仓库里有 6 处占位符（`package.json` 4 处、`README.md` 1 处、`LICENSE` 1 处）。有一个脚本一次改完：
+**这个仓库已经填好了**（owner 是 `a1435473620`，没有残留占位符）。这一节是给 fork 或改名的人用的。
+
+占位符一共 7 处：`package.json` 4 处、`README.md` 1 处、`README.en.md` 1 处、`LICENSE` 1 处。有一个脚本一次改完：
 
 ```bash
 node <path-to>/prepare-push.mjs <你的GitHub用户名>
@@ -28,9 +30,9 @@ Windows 上直接双击 `PREPARE-PUSH.cmd` 也行，会提示你输入用户名�
 
 不改的话 README 里的安装命令是坏的，而市场扫描器会检查"README 里有可复制的安装命令"这一条。
 
-`PUBLISHING.md` 本身不参与替换——它就是讲这件事的，里面的占位符是示例。
+`PUBLISHING.md` 本身不参与替换 —— 它就是讲这件事的，里面的占位符是示例。
 
-Six placeholders live in the repo. The script above replaces all of them. Until it runs, the install command in the README is broken and the crawler's "README contains a copyable install command" check fails.
+Already done in this repo. The script is for forks and renames. Until it runs, the install command in the README is broken and the crawler's "README contains a copyable install command" check fails.
 
 ---
 
@@ -126,6 +128,24 @@ dsh plugin --profile web add dsh-web-search-nokey
 需要重新发布时，先改 `package.json` 的 `version` 再 `npm publish` —— npm 不允许覆盖已发布的版本号。
 
 Note this is a dsh plugin, not a global CLI: `npm install -g` does nothing useful. `dsh plugin` forwards to pnpm and installs into the profile.
+
+---
+
+## 关于中英文切换 / About the language switcher
+
+**GitHub 没有 README 语言切换器这个功能。** 官方文档里关于多 README 只说了一句：它按 `.github` → 根目录 → `docs` 的顺序挑一个渲染，其余的一律不管。文档通篇没有 locale / 多语言 / 切换的任何说法。
+
+所以你在别人仓库看到的「English · 中文」，都是**作者手写的一行链接**，不是 GitHub 给的 UI。
+
+这个仓库的做法：
+
+- `README.md` —— 中文
+- `README.en.md` —— 英文
+- 两份文件的第一行各有一段互链，那是唯一的切换入口
+
+再加语言时，**必须在所有 README 变体的切换行里都补上**。这是最容易漏的一步：只在新文件里写，老文件的读者永远发现不了新语言。GitHub 不会替你同步。
+
+GitHub has no README language switcher. The switcher line people see on other repos is hand-written links. Keep every README variant's line in sync — GitHub will not do it for you.
 
 ---
 
