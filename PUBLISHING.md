@@ -106,15 +106,63 @@ This one has no shortcut. It is the only thing the crawlers look at.
 
 包名 `dsh-web-search-nokey` 在 npm 上**没被占用**（已查，返回 404）。
 
+### 先看这个：`npm publish` 现在会 403
+
+直接 `npm publish` 大概率返回：
+
+```
+npm error code E403
+npm error 403 Forbidden - PUT https://registry.npmjs.org/<pkg>
+npm error  Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages.
+```
+
+**这不是你的包有问题，是 npm 的强制策略**：发布必须满足 2FA。`npm login` 登录成功也没用 —— 交互式登录不会带 `bypass 2fa` 声明。
+
+两条路，选一条：
+
+**路线 A：装个认证器 App，发布时带 OTP**（最简单，每次都要输码）
+
+1. npmjs.com → Account → Two-Factor Authentication → 启用 **TOTP**（用 Google Authenticator / 1Password 之类扫二维码）
+2. 发布时：
+
 ```bash
-npm login            # 浏览器登录一次，之后本机就有凭据了
+npm publish --access public --otp=123456
+```
+
+> 注意：**WebAuthn 安全密钥不行**。`--otp` 要的是一个能手输的六位数字，硬件密钥产生不了这个码。账号只绑了安全钥匙的话，终端里没法满足 2FA，只能走路线 B。
+
+**路线 B：Granular Access Token + 勾选 Bypass 2FA**（一次配好，之后免 OTP）
+
+1. 打开 <https://www.npmjs.com/settings/你的用户名/tokens>
+2. **Generate New Token → Granular Access Token**
+3. 填：
+
+| 字段 | 填什么 |
+| --- | --- |
+| Token name | 随便，比如 `publish-dsh-web-search-nokey` |
+| **Bypass two-factor authentication (2FA)** | **必须勾上** ← 默认是**不勾**的，忘了勾就会继续报 E403/EOTP |
+| Packages and scopes | **Read and write**，且**必须把 `dsh-web-search-nokey` 选进去** |
+| Expiration | 按需，比如 90 天 |
+
+4. 生成后**立刻复制**（只显示一次），然后：
+
+```bash
+npm config set //registry.npmjs.org/:_authToken "刚复制的token"
 npm publish --access public
 ```
 
-发完之后安装命令从
+> 两个坑：
+> - Bypass 2FA **默认不勾**，这是最常见的翻车点。
+> - token 必须**限定到这个包**。用限定给 A 包的 token 发 B 包，返回的 403 和 2FA 那个长得一模一样，很难查。
+
+**另外**：npm 已经公告，bypass-2FA token 的**直接发布能力将在 2027 年 1 月移除**，官方替代方案是基于 OIDC 的 trusted publishing（从 CI 发）。个人偶尔发一版的话，现在用哪种都行。
+
+### 发完
+
+安装命令从
 
 ```bash
-dsh plugin --profile web add github:<user>/dsh-web-search-nokey
+dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
 ```
 
 变成
@@ -125,9 +173,9 @@ dsh plugin --profile web add dsh-web-search-nokey
 
 注意：**不是 `npm install -g`**。这是 dsh 的插件，要装进 profile 才有用，`dsh plugin` 会转发给 pnpm 装到 `<DSH_HOME>/profiles/web/`。
 
-需要重新发布时，先改 `package.json` 的 `version` 再 `npm publish` —— npm 不允许覆盖已发布的版本号。
+需要重新发布时，先改 `package.json` 的 `version` 再发 —— npm 不允许覆盖已发布的版本号。
 
-Note this is a dsh plugin, not a global CLI: `npm install -g` does nothing useful. `dsh plugin` forwards to pnpm and installs into the profile.
+npm now refuses to publish without 2FA. `npm login` alone is not enough — an interactive session carries no "bypass 2fa" claim. Either enable TOTP and pass `--otp=`, or create a Granular Access Token with the **Bypass 2FA** box ticked (it is unchecked by default) scoped to this package with Read and write.
 
 ---
 
