@@ -72,14 +72,6 @@ Bing 包含两个子引擎（RSS 与网页版）；`bing`、`360`、`haosou`、`
 3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/...
 ```
 
-### 跳转链接的展开
-
-百度、搜狗、360 与 Bing 返回的结果链接多为跳转壳。这些链接会在服务端展开为真实地址后再返回。
-
-模型收到跳转壳后会去请求它，得到的是中间页，而中间页通常是广告。展开失败的条目会被丢弃，避免返回无法打开的链接。
-
-由 `resolveRedirects`（默认开）和 `maxResolve`（默认 5 条/次）控制。各站点的广告块（带“广告”“品牌推广”标记的）也在解析阶段跳过。
-
 ### Google 与出口节点
 
 Google 默认按可达性启用：插件在后台进行一次可达性探测，成功时才将其加入本轮引擎序列，没有出口节点的机器因此不会产生探测超时。需要强制启用时设为 `google: on`。
@@ -207,16 +199,6 @@ Roughly 200ms per query, eight results with snippets. One real call looks like t
 2. 全文首发 deepseek harness 背后的秘密...   https://zhuanlan.zhihu.com/p/2071...
 3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/...
 ```
-
-### Redirect handling
-
-Results from Baidu, Sogou, 360 and Bing mostly come as redirect shells. These are expanded into the real address server-side before the result is returned.
-
-A model that receives a redirect shell will fetch it and land on an interstitial,
-which is where the ads are. Shells that fail to expand are dropped, so no
-unopenable link is returned. `resolveRedirects` (default true) and `maxResolve`
-(default 5) control it, and each engine's ad blocks (marked 广告 / 品牌推广 inside
-the block) are skipped during parsing.
 
 ### Google and exit nodes
 
