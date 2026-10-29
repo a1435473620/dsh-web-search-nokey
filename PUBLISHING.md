@@ -297,6 +297,43 @@ dsh plugin --profile web add ./dsh-web-search-nokey-<version>.tgz   # 版本号�
 
 别用 `link:` 图省事：pnpm 在 Windows 上把它按"相对项目目录"解释，会造出指向 `<profile>/D:/...` 的坏符号链接。
 
+### 装到一半被 safe-delete 拦住时 / When the install dies on safe-delete
+
+WorkBuddy 的沙箱会在 `node_modules` 里拦批量删除，阈值 50 个文件。pnpm 换包要先删旧目录，于是：
+
+```
+ERR_PNPM_LINKING_FAILED [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED]
+  {"count":106,"threshold":50,"scope":"turn","targets":[...\node_modules\dsh-purge]}
+```
+
+**别急着重试，先看它想删的是谁。** 上面这个例子里删的是 `dsh-purge` —— 那个依赖锁在 GitHub 的 `master` tar.gz 上，pnpm 每次 install 都会重新解析一次，文件数一变就触发删除，跟你要装的插件没关系。
+
+关键点是：**这个报错发生在解包之后**。目标目录里已经是新版本了，只是 manifest 和 lock 没来得及写。所以最省事的收尾是手工补齐，而不是跟 pnpm 的删除逻辑较劲：
+
+```bash
+cd ~/.dsh/profiles/web
+grep '"version"' node_modules/dsh-web-search-nokey/package.json    # 确认已经是新版
+```
+
+要改的四处，路径和 integrity 一起换：
+
+| 文件 | 改什么 |
+| --- | --- |
+| `package.json` | `"dsh-web-search-nokey": "file:…/<新版本>.tgz"` |
+| `pnpm-lock.yaml` | importers 里的 `specifier` / `version`，以及 `packages` 段的键、`resolution` 的 `tarball` 与 `integrity` |
+| `node_modules/.pnpm/lock.yaml` | 同上（pnpm 的权威状态在这一份） |
+| `node_modules/.modules.yaml` | `dsh-web-search-nokey@file:…` 键 |
+
+integrity 就是 tarball 的 sha512，自己算：
+
+```bash
+echo "sha512-$(openssl dgst -sha512 -binary <新版本>.tgz | openssl base64 -A)"
+```
+
+**先拿旧版本算一遍，跟 lock 里现有的值对一下** —— 对上了才说明算法没错，再去算新的。四个改完，`node` 里 `import('dsh-web-search-nokey')` 能起来、`test/with-seam.mjs` 能过，就是装好了。
+
+`pnpm list` 仍可能显示旧版本号（它自己那份解析缓存），以磁盘上的 `package.json` 和 seam 实测为准；下一次成功的 `dsh plugin install` 会把它对齐。
+
 ---
 
 ## 发布前自查 / Before you push
