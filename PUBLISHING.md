@@ -292,7 +292,7 @@ GitHub has no README language switcher. The line people see on other repos is ha
 
 ```bash
 npx pnpm pack
-dsh plugin --profile web add ./dsh-web-search-nokey-1.0.0.tgz
+dsh plugin --profile web add ./dsh-web-search-nokey-<version>.tgz   # 版本号看 package.json
 ```
 
 别用 `link:` 图省事：pnpm 在 Windows 上把它按"相对项目目录"解释，会造出指向 `<profile>/D:/...` 的坏符号链接。
@@ -302,11 +302,13 @@ dsh plugin --profile web add ./dsh-web-search-nokey-1.0.0.tgz
 ## 发布前自查 / Before you push
 
 ```bash
-npm run smoke                                            # 模块契约 + 补丁一致性 + 一次联网真查
+npm run smoke                                            # 模块契约 + 配置 + 补丁一致性 + 一次联网真查
+npm run test:parsers                                     # 离线解析（不需要网络）
 
 cd ~/.dsh/profiles/web                                   # 需要已安装本插件
 node <repo>/test/with-seam.mjs                           # 真实 ctx.web 选择
 node <repo>/test/with-tool-layer.mjs                     # 真实 web_search 工具
 
+npm run live                                             # 逐引擎实网体检；换台能连外网的机器再跑一次
 npx pnpm pack                                            # 看 files 白名单
 ```
