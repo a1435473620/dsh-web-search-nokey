@@ -152,6 +152,8 @@ dsh 0.1.5-rc.2、`web` profile、Windows 上实测过。Node 22 和 24 都跑过
 
 这是这个仓库唯一想要的回报。别提 issue 说谢谢，把 issue 留给真问题。
 
+不想公开说的问题，邮件也可以：[zjk143@outlook.com](mailto:zjk143@outlook.com)。
+
 
 ## English
 
@@ -300,6 +302,8 @@ Tested on dsh 0.1.5-rc.2, `web` profile, Windows, Node 24 and 22.
 To find out whether a given site is reachable on your network, run `npm run live` in the repo (or `npm run live google` for one engine). It hits each engine for real and prints row count, latency and self-link count — `BLOCK` means a captcha, `FAIL` means it genuinely did not connect. The Google and Yandex parsers can only be verified this way on a machine that can reach them.
 
 If this got your search working again, a star is what helps the next person who hits the same 401 find it: [star this repo](https://github.com/a1435473620/dsh-web-search-nokey).
+
+Private feedback goes to [zjk143@outlook.com](mailto:zjk143@outlook.com); issues are for real problems.
 
 ## License
 
