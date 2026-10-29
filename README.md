@@ -3,16 +3,16 @@
 [![GitHub stars](https://img.shields.io/github/stars/a1435473620/dsh-web-search-nokey?style=flat)](https://github.com/a1435473620/dsh-web-search-nokey)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-dsh-web-search-nokey 是 dsh 的搜索插件：不使用 API key，查询请求公开搜索页，七个站点按固定顺序兜底，结果里的跳转链接先展开成真实地址再返回。
+dsh-web-search-nokey 是 dsh 的搜索插件：不使用 API key，查询公开搜索页，七个站点按固定顺序兜底，结果里的跳转链接先展开成真实地址再返回。
 
-它解决的问题很具体：用 Trae 或 WorkBuddy 积分把模型接入 dsh 后，聊天正常，`web_search` 一直返回 401——dsh 的搜索模块只认 `DEEPSEEK_API_KEY`，积分账号没有这把 key。
+典型场景：用 Trae 或 WorkBuddy 积分把模型接入 dsh 后，聊天正常，而 `web_search` 返回 401——搜索模块只接受 `DEEPSEEK_API_KEY`，积分接入不提供该 key。
 
 ```
 DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is invalid
 ```
 
-- 七个站点按顺序兜底：Bing、Google、Yandex、百度、搜狗、DuckDuckGo、360；凑够条数即停止。
-- 百度、搜狗、360 的 `/link?url=`，Bing 的 `/ck/a`，Google 的 `/url?q=`，都在服务端展开成真实地址；模型不会拿到中间页。
+- 七个站点按固定顺序兜底：Bing、Google、Yandex、百度、搜狗、DuckDuckGo、360；凑够条数即停止。
+- 各站点的跳转链接在服务端展开为真实地址，模型不会拿到中间页。
 - 带广告标记的结果块在解析阶段剔除。
 - 直连约 200–500 ms；Bing 命中即返回，不必等后面的引擎。
 - 纯 ESM，无依赖，安装时不执行脚本。
@@ -25,7 +25,7 @@ DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is i
 
 dsh 中聊天与搜索走不同的路径：聊天经过所配置的连接器，搜索是另一个内置模块，只接受 `DEEPSEEK_API_KEY`。使用积分接入时没有这个 key，搜索请求返回 401，聊天不受影响。
 
-这个插件向 `ctx.web` 注册一个无凭据的 `WebSearchProvider`，查询直接请求公开搜索页，结果按 seam 的 source 格式返回。
+这个插件为 dsh 注册一个无凭据的搜索后端，查询公开搜索页，结果按 dsh 的搜索结果格式返回。
 
 `web_fetch` 不受影响：它本身就是匿名抓取，没有凭据环节。
 
@@ -72,17 +72,17 @@ Bing 包含两个子引擎（RSS 与网页版）；`bing`、`360`、`haosou`、`
 3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/…
 ```
 
-### 重定向会先展开
+### 跳转链接的展开
 
-百度、搜狗、360 给的常是 `/link?url=…` 跳转壳，Bing 给的是 `/ck/a?u=…`。这些壳会**先在服务端展开成真实地址**再返回。
+百度、搜狗、360 与 Bing 返回的结果链接多为跳转壳。这些链接会在服务端展开为真实地址后再返回。
 
-原因在于模型收到跳转壳后会去请求它，得到的是中间页，而中间页通常是广告。展开失败的条目会被丢弃，避免返回无法打开的链接。
+模型收到跳转壳后会去请求它，得到的是中间页，而中间页通常是广告。展开失败的条目会被丢弃，避免返回无法打开的链接。
 
-由 `resolveRedirects`（默认开）和 `maxResolve`（默认 5 条/次）控制。各站点的广告块（带“广告”“品牌推广”标记的）也在解析阶段就跳过。
+由 `resolveRedirects`（默认开）和 `maxResolve`（默认 5 条/次）控制。各站点的广告块（带“广告”“品牌推广”标记的）也在解析阶段跳过。
 
 ### Google 与出口节点
 
-Google 默认按可达性启用：插件在后台请求一次 `generate_204`，成功时才将其加入本轮引擎序列，没有出口节点的机器因此不会产生探测超时。需要强制启用时设为 `google: on`。
+Google 默认按可达性启用：插件在后台进行一次可达性探测，成功时才将其加入本轮引擎序列，没有出口节点的机器因此不会产生探测超时。需要强制启用时设为 `google: on`。
 
 ### 配置
 
@@ -112,7 +112,7 @@ Google 默认按可达性启用：插件在后台请求一次 `generate_204`，�
 
 ### 已知问题
 
-站点是否可用，跟你的出口 IP 关系极大。2026-10 在一台大陆机器上实测：
+站点可用性与出口 IP 相关。2026-10 在一台大陆机器上实测：
 
 | 站点 | 状态 |
 | --- | --- |
@@ -122,21 +122,21 @@ Google 默认按可达性启用：插件在后台请求一次 `generate_204`，�
 | 百度 | 基本直接回「百度安全验证」 |
 | Yandex | 回 SmartCaptcha（HTTP 200 + 验证码页） |
 | Google / DuckDuckGo | 不通，需要出口节点 |
-| 多吉（dogedoge） | 站点本身连不上，没接 |
+| 多吉（dogedoge） | 站点无法访问，未接入 |
 
 被拦不是故障，所以插件把它记作「跳过」而不是「失败」，不会触发 `degraded` 告警。只有全部引擎都失败才抛出错误。
 
 冷却分两种，因为原因不一样：
 
 - **验证码 / 同意墙**：出口 IP 已被标记，冷却 `probeTtlMs`（默认 10 分钟）
-- **429 / 503 限流**：请求频率过高，按响应里的 `Retry-After` 冷却；未提供该头时退到 2 分钟
+- **429 / 503 限流**：请求频率过高，按响应指示的时长冷却；未提供时退到 2 分钟
 
 若把两者合并成一个 10 分钟窗口，一次常规限流也会让引擎停用十分钟，表现与引擎损坏相同。
 
 其余：
 
-- 多数结果没有日期。Bing RSS 给的是抓取时间不是发布时间，填进去会让旧页面显得很新，所以故意不填。每次抓取的耗时和时间点只进 debug 日志（`fetched in 312ms at 2026-10-29T…`），不塞进结果。
-- 同样的查询在 `cacheTtlMs`（默认 5 分钟）内直接吃缓存，不再出网。缓存只存完整成功的答案，降级的那次不存 —— 否则半小时内都拿不到更好的结果。
+- 多数结果没有日期：Bing RSS 提供的是抓取时间而非发布时间，写入会使旧页面显示为最新，因此不填充。抓取耗时与时间点只记录在 debug 日志（`fetched in 312ms at 2026-10-29T…`）中，不写入结果。
+- 相同的查询在 `cacheTtlMs`（默认 5 分钟）内直接命中缓存，不发起网络请求。缓存只保存完整成功的结果；降级结果不写入缓存，否则在剩余时间内会持续返回较差的结果。
 - 数据来源是公开搜索页而非官方接口，高频调用会被限流，这是该方案的固有限制。
 - 没有结果时返回空列表；只有全部引擎都失败才抛出错误。
 
@@ -161,7 +161,7 @@ The problem it solves is narrow. In dsh, chat and search take different paths: c
 DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is invalid
 ```
 
-The plugin registers a credential-free `WebSearchProvider` on `ctx.web`. `web_fetch` is not affected: it is an anonymous fetcher with no credential step.
+The plugin registers a credential-free search provider with dsh. `web_fetch` is not affected: it is an anonymous fetcher with no credential step.
 
 ### Install
 
@@ -208,11 +208,9 @@ Roughly 200ms per query, eight results with snippets. One real call looks like t
 3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/…
 ```
 
-### Redirects are expanded first
+### Redirect handling
 
-Baidu, Sogou and 360 mostly hand out `/link?url=…` shells; Bing hands out
-`/ck/a?u=…`. Those are expanded into the real address **server-side, before the
-result is returned**.
+Results from Baidu, Sogou, 360 and Bing mostly come as redirect shells. These are expanded into the real address server-side before the result is returned.
 
 A model that receives a redirect shell will fetch it and land on an interstitial,
 which is where the ads are. Shells that fail to expand are dropped, so no
@@ -222,8 +220,8 @@ the block) are skipped during parsing.
 
 ### Google and exit nodes
 
-Google is enabled based on reachability by default: the plugin probes
-`generate_204` in the background and schedules Google only when the probe
+Google is enabled based on reachability by default: the plugin performs a
+reachability probe in the background and schedules Google only when the probe
 answers, so machines without an exit node produce no probe timeout. `google: on`
 forces it.
 
@@ -249,7 +247,7 @@ Edit the profile's `cordis.patch.yml` if a field needs changing.
 | `proxy` | empty | e.g. `http://127.0.0.1:7897` |
 | `userAgent` | desktop Chrome | These pages turn away bare clients |
 
-`freshness` is honoured by Bing, Google, Baidu, Sogou and DuckDuckGo; Yandex and 360 have no documented no-JS parameter, so no parameter is sent for them.
+`freshness` is honoured by Bing, Google, Baidu, Sogou and DuckDuckGo; Yandex and 360 do not support the parameter, so none is sent for them.
 
 Environment variables override the same fields with the `DSH_WEB_SEARCH_NOKEY_` prefix. `HTTPS_PROXY` / `HTTP_PROXY` are honoured too.
 
@@ -266,7 +264,7 @@ from a machine in mainland China:
 | Baidu | answers with its security check |
 | Yandex | SmartCaptcha (HTTP 200 with a captcha page) |
 | Google / DuckDuckGo | unreachable without an exit node |
-| dogedoge | the site itself does not answer; not wired up |
+| dogedoge | the site does not respond; not integrated |
 
 A block is not a malfunction, so it is recorded as a skip and the engine rests
 instead of raising `degraded` noise. The two reasons rest for different spans,
@@ -274,8 +272,8 @@ because they are different problems:
 
 - **Captcha / consent wall** — the exit IP has been flagged; rests for `probeTtlMs`
   (ten minutes by default).
-- **429 / 503** — the request rate was too high; rests for whatever `Retry-After`
-  asked for, falling back to two minutes.
+- **429 / 503** — the request rate was too high; rests for the duration the
+  response specifies, falling back to two minutes.
 
 Collapsing those into one ten-minute window means a routine rate limit silently
 takes an engine out for ten minutes, which reads as "Sogou just stopped working".
