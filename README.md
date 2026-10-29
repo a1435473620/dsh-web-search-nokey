@@ -1,6 +1,5 @@
 # dsh-web-search-nokey
 
-[![GitHub stars](https://img.shields.io/github/stars/a1435473620/dsh-web-search-nokey?style=flat)](https://github.com/a1435473620/dsh-web-search-nokey)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 dsh-web-search-nokey 是 dsh 的搜索插件：不使用 API key，查询公开搜索页，七个站点按固定顺序兜底，结果里的跳转链接先展开成真实地址再返回。
@@ -280,3 +279,5 @@ If this got your search working again, a star is what helps the next person who 
 ## License
 
 MIT
+
+[![GitHub stars](https://img.shields.io/github/stars/a1435473620/dsh-web-search-nokey?style=flat)](https://github.com/a1435473620/dsh-web-search-nokey)
