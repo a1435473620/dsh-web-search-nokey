@@ -66,10 +66,10 @@ Bing 包含两个子引擎（RSS 与网页版）；`bing`、`360`、`haosou`、`
 ```text
 > web_search "cordis plugin lifecycle"
 
-3 条 · 502ms
+3 条 | 502ms
 1. Welcome to Cordis                    https://cordis.com/
-2. 全文首发 deepseek harness 背后的秘密…   https://zhuanlan.zhihu.com/p/2071…
-3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/…
+2. 全文首发 deepseek harness 背后的秘密...   https://zhuanlan.zhihu.com/p/2071...
+3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/...
 ```
 
 ### 跳转链接的展开
@@ -135,7 +135,7 @@ Google 默认按可达性启用：插件在后台进行一次可达性探测，�
 
 其余：
 
-- 多数结果没有日期：Bing RSS 提供的是抓取时间而非发布时间，写入会使旧页面显示为最新，因此不填充。抓取耗时与时间点只记录在 debug 日志（`fetched in 312ms at 2026-10-29T…`）中，不写入结果。
+- 多数结果没有日期：Bing RSS 提供的是抓取时间而非发布时间，写入会使旧页面显示为最新，因此不填充。抓取耗时与时间点只记录在 debug 日志（`fetched in 312ms at 2026-10-29T...`）中，不写入结果。
 - 相同的查询在 `cacheTtlMs`（默认 5 分钟）内直接命中缓存，不发起网络请求。缓存只保存完整成功的结果；降级结果不写入缓存，否则在剩余时间内会持续返回较差的结果。
 - 数据来源是公开搜索页而非官方接口，高频调用会被限流，这是该方案的固有限制。
 - 没有结果时返回空列表；只有全部引擎都失败才抛出错误。
@@ -202,10 +202,10 @@ Roughly 200ms per query, eight results with snippets. One real call looks like t
 ```text
 > web_search "cordis plugin lifecycle"
 
-3 results · 502ms
+3 results | 502ms
 1. Welcome to Cordis                    https://cordis.com/
-2. 全文首发 deepseek harness 背后的秘密…   https://zhuanlan.zhihu.com/p/2071…
-3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/…
+2. 全文首发 deepseek harness 背后的秘密...   https://zhuanlan.zhihu.com/p/2071...
+3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/...
 ```
 
 ### Redirect handling
@@ -282,7 +282,7 @@ The error only surfaces when every engine genuinely failed.
 
 Also:
 
-- Most results have no date. Bing's RSS carries crawl time, not publish time; writing that through would make stale pages look fresh, so it's left out. When a fetch happened, and how long it took, goes to the debug log (`fetched in 312ms at 2026-10-29T…`) rather than onto the results.
+- Most results have no date. Bing's RSS carries crawl time, not publish time; writing that through would make stale pages look fresh, so it's left out. When a fetch happened, and how long it took, goes to the debug log (`fetched in 312ms at 2026-10-29T...`) rather than onto the results.
 - An identical query inside `cacheTtlMs` (five minutes by default) is served from cache without touching the network. Only a clean answer is cached — a degraded one is not, or a bad minute would stick for the whole TTL.
 - Public result pages, not an official API. Heavy use gets rate-limited; this is an inherent limit of using public result pages.
 - An empty result set is an empty list; only a total failure throws.
