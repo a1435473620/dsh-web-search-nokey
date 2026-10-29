@@ -3,21 +3,19 @@
 [![GitHub stars](https://img.shields.io/github/stars/a1435473620/dsh-web-search-nokey?style=flat)](https://github.com/a1435473620/dsh-web-search-nokey)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-给 dsh 一个不用 API key 的搜索：七个站点按序兜底，跳转壳先展开成真实地址再交出去。
+dsh-web-search-nokey 是 dsh 的搜索插件：不使用 API key，查询请求公开搜索页，七个站点按固定顺序兜底，结果里的跳转链接先展开成真实地址再返回。
 
-用 Trae 积分 / WorkBuddy 积分把模型接进 dsh 的人，大概率撞过这个：
+它解决的问题很具体：用 Trae 或 WorkBuddy 积分把模型接入 dsh 后，聊天正常，`web_search` 一直返回 401——dsh 的搜索模块只认 `DEEPSEEK_API_KEY`，积分账号没有这把 key。
 
 ```
 DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is invalid
 ```
 
-聊天是好的，`web_search` 一直 401。装完这个插件就好了，不需要任何 key。
-
-- **不用 key** —— 查询直接打公开搜索页，全程不碰 `DEEPSEEK_API_KEY`
-- **七个站点** —— Bing / Google / Yandex / 百度 / 搜狗 / DuckDuckGo / 360，按顺序兜底，凑够条数就停
-- **给模型真地址** —— 百度搜狗 360 的 `/link?url=`、Bing 的 `/ck/a` 在服务端就展开掉，模型不会落到中间页和广告上
-- **直连 200–500ms** —— 不用等满八个引擎，Bing 命中就够了
-- **一个依赖都没有** —— 纯 ESM，没有构建步骤，装的时候不跑脚本
+- 七个站点按顺序兜底：Bing、Google、Yandex、百度、搜狗、DuckDuckGo、360；凑够条数即停止。
+- 百度、搜狗、360 的 `/link?url=`，Bing 的 `/ck/a`，Google 的 `/url?q=`，都在服务端展开成真实地址；模型不会拿到中间页。
+- 带广告标记的结果块在解析阶段剔除。
+- 直连约 200–500 ms；Bing 命中即返回，不必等后面的引擎。
+- 纯 ESM，无依赖，安装时不执行脚本。
 
 [中文](#中文) · [English](#english)
 
@@ -152,22 +150,18 @@ dsh 0.1.5-rc.2、`web` profile、Windows 上实测过。Node 22 和 24 都跑过
 
 这是这个仓库唯一想要的回报。别提 issue 说谢谢，把 issue 留给真问题。
 
-不想公开说的问题，邮件也可以：[zjk143@outlook.com](mailto:zjk143@outlook.com)。
-
 
 ## English
 
-### What it fixes
+dsh-web-search-nokey is a search plugin for dsh. It uses no API key: queries go to public search pages, seven engines fall back in a fixed order, and redirect links in results are expanded to real URLs before anything is returned.
 
-Chat and search take different paths in dsh. Chat goes through whatever connector you configured. Search is a separate built-in module that only accepts `DEEPSEEK_API_KEY`. On credits-based setups (Trae, WorkBuddy) that key never exists, so `web_search` returns 401 forever while chat keeps working:
+The problem it solves is narrow. In dsh, chat and search take different paths: chat runs through whichever connector you configured, while search is a separate module that only accepts `DEEPSEEK_API_KEY`. On credits-based setups (Trae, WorkBuddy) that key does not exist, so `web_search` returns 401 while chat keeps working:
 
 ```
 DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is invalid
 ```
 
-This plugin registers a credential-free `WebSearchProvider` on `ctx.web`. Queries hit public result pages and come back in the seam's own source shape.
-
-`web_fetch` was never broken — anonymous fetcher, no credential step.
+The plugin registers a credential-free `WebSearchProvider` on `ctx.web`. `web_fetch` was never broken — it is an anonymous fetcher with no credential step.
 
 ### Install
 
@@ -302,8 +296,6 @@ Tested on dsh 0.1.5-rc.2, `web` profile, Windows, Node 24 and 22.
 To find out whether a given site is reachable on your network, run `npm run live` in the repo (or `npm run live google` for one engine). It hits each engine for real and prints row count, latency and self-link count — `BLOCK` means a captcha, `FAIL` means it genuinely did not connect. The Google and Yandex parsers can only be verified this way on a machine that can reach them.
 
 If this got your search working again, a star is what helps the next person who hits the same 401 find it: [star this repo](https://github.com/a1435473620/dsh-web-search-nokey).
-
-Private feedback goes to [zjk143@outlook.com](mailto:zjk143@outlook.com); issues are for real problems.
 
 ## License
 

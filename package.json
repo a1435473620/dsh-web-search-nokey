@@ -4,7 +4,7 @@
   "version": "1.2.0",
   "description": "Keyless web_search for DeepSeek Harness — no API key, 7 engines in fallback order, redirect shells expanded into real URLs. Fixes the 401 on credits-only setups.",
   "license": "MIT",
-  "author": "a1435473620 <zjk143@outlook.com>",
+  "author": "a1435473620",
   "type": "module",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
