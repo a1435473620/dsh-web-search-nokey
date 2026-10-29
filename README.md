@@ -21,21 +21,21 @@ DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is i
 
 ## 中文
 
-### 它修的是什么
+### 解决的问题
 
-dsh 里聊天和搜索不是一条路。聊天走你配置的连接器，搜索是另一个内置模块，只认 `DEEPSEEK_API_KEY`。你用积分跑模型，手里没有那把 key，搜索就永远是死的。
+dsh 中聊天与搜索走不同的路径：聊天经过所配置的连接器，搜索是另一个内置模块，只接受 `DEEPSEEK_API_KEY`。使用积分接入时没有这个 key，搜索请求返回 401，聊天不受影响。
 
-这个插件往 `ctx.web` 注册一个不用凭据的 `WebSearchProvider`，查询直接打公开搜索页，结果按 seam 的 source 格式交回去。
+这个插件向 `ctx.web` 注册一个无凭据的 `WebSearchProvider`，查询直接请求公开搜索页，结果按 seam 的 source 格式返回。
 
-`web_fetch` 本来就没事。它是匿名抓取，压根没有凭据环节。
+`web_fetch` 不受影响：它本身就是匿名抓取，没有凭据环节。
 
-### 装
+### 安装
 
 ```
 dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
 ```
 
-装完就生效，不用改配置，也不用重启。不是 `npm install -g` —— 这是 dsh 插件，要装进 profile。
+安装后立即生效，无需修改配置或重启。它不是 `npm install -g`：这是 dsh 插件，需要装入 profile。
 
 卸载：
 
@@ -43,15 +43,15 @@ dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
 dsh plugin --profile web remove dsh-web-search-nokey
 ```
 
-### 包里那个 patch 别删
+### cordis.patch.yml 的作用
 
-dsh 的搜索后端同一时间只能选一个。不显式指定，它会去数有几个能用的；内置那个后端永远说自己能用，两个一撞就是 `WEB_PROVIDER_AMBIGUOUS`，搜索反而彻底挂掉。
+dsh 的搜索后端同一时间只允许一个生效。未显式指定时，框架会统计可用的后端数量；内置后端始终报告自身可用，两个后端同时注册时会产生 `WEB_PROVIDER_AMBIGUOUS`，搜索不可用。
 
-所以包里带了 `cordis.patch.yml`，把 `web.searchProvider` 写死成这个插件。删了它，插件本身还在，选择逻辑就乱了。
+因此包内附带 `cordis.patch.yml`，将 `web.searchProvider` 固定为本插件。删除该文件后插件仍会加载，但后端选择不再确定。
 
 ### 怎么用
 
-直接用。`web_search` 会路由到这里。
+安装后无需额外配置，`web_search` 会自动路由到本插件。
 
 默认八个 id、七个站点，按顺序兜底，条数够了就停：
 
@@ -59,7 +59,7 @@ dsh 的搜索后端同一时间只能选一个。不显式指定，它会去数�
 Bing(RSS) → Bing(网页) → Google → Yandex → 百度 → 搜狗 → DuckDuckGo → 360
 ```
 
-Bing 内部是两条腿；`bing`、`360`、`haosou`、`ddg` 都是别名，配置里写成站点名就行。
+Bing 包含两个子引擎（RSS 与网页版）；`bing`、`360`、`haosou`、`ddg` 是别名，配置中可直接写站点名。
 
 直连大约 200ms，返回 8 条带摘要的结果。一次真实调用长这样：
 
@@ -76,17 +76,17 @@ Bing 内部是两条腿；`bing`、`360`、`haosou`、`ddg` 都是别名，配�
 
 百度、搜狗、360 给的常是 `/link?url=…` 跳转壳，Bing 给的是 `/ck/a?u=…`。这些壳会**先在服务端展开成真实地址**再返回。
 
-理由很实际：把跳转壳丢给模型，模型会去 fetch 它，落到中间页上，而中间页往往就是广告。展开失败的直接丢弃，绝不下发——宁可少一条，也不给一条打不开的。
+原因在于模型收到跳转壳后会去请求它，得到的是中间页，而中间页通常是广告。展开失败的条目会被丢弃，避免返回无法打开的链接。
 
 由 `resolveRedirects`（默认开）和 `maxResolve`（默认 5 条/次）控制。各站点的广告块（带“广告”“品牌推广”标记的）也在解析阶段就跳过。
 
 ### Google 与出口节点
 
-Google 默认「有路才用」。插件在后台先探一次 `generate_204`，通了才把它排进这一轮，所以没有出口节点的机器不会为超时付钱。想强制打开就写 `google: on`。
+Google 默认按可达性启用：插件在后台请求一次 `generate_204`，成功时才将其加入本轮引擎序列，没有出口节点的机器因此不会产生探测超时。需要强制启用时设为 `google: on`。
 
 ### 配置
 
-一般不用碰。要改就改 profile 里的 `cordis.patch.yml`。
+通常无需修改；需要调整时编辑 profile 里的 `cordis.patch.yml`。
 
 | 字段 | 默认 | 说明 |
 | --- | --- | --- |
@@ -106,7 +106,7 @@ Google 默认「有路才用」。插件在后台先探一次 `generate_204`，�
 | `proxy` | 空 | 需要代理时填，例如 `http://127.0.0.1:7897` |
 | `userAgent` | 桌面 Chrome | 这些搜索页会拦裸客户端 |
 
-`freshness` 只有 Bing、Google、百度、搜狗、DuckDuckGo 认；Yandex 和 360 没有可用的无 JS 参数，宁可传空也不猜一个错的。
+`freshness` 只有 Bing、Google、百度、搜狗、DuckDuckGo 支持；Yandex 和 360 没有可用的无 JS 参数，因此不向它们传递该参数。
 
 环境变量同样这几项，前缀 `DSH_WEB_SEARCH_NOKEY_`。`HTTPS_PROXY` / `HTTP_PROXY` 也认。
 
@@ -124,21 +124,21 @@ Google 默认「有路才用」。插件在后台先探一次 `generate_204`，�
 | Google / DuckDuckGo | 不通，需要出口节点 |
 | 多吉（dogedoge） | 站点本身连不上，没接 |
 
-被拦不是故障，所以插件把它记作「跳过」而不是「失败」，不会污染 `degraded` 告警。全部引擎都真失败才抛错。
+被拦不是故障，所以插件把它记作「跳过」而不是「失败」，不会触发 `degraded` 告警。只有全部引擎都失败才抛出错误。
 
 冷却分两种，因为原因不一样：
 
-- **验证码 / 同意墙**：出口 IP 被烧了，冷却 `probeTtlMs`（默认 10 分钟）
-- **429 / 503 限流**：只是问得太快，按响应里的 `Retry-After` 冷却；没给这个头就退到 2 分钟
+- **验证码 / 同意墙**：出口 IP 已被标记，冷却 `probeTtlMs`（默认 10 分钟）
+- **429 / 503 限流**：请求频率过高，按响应里的 `Retry-After` 冷却；未提供该头时退到 2 分钟
 
-把两者混成一个「10 分钟」的后果是：一次正常的限流会让引擎静默十分钟，用户看到的是「搜狗怎么突然不能用了」。
+若把两者合并成一个 10 分钟窗口，一次常规限流也会让引擎停用十分钟，表现与引擎损坏相同。
 
 其余：
 
 - 多数结果没有日期。Bing RSS 给的是抓取时间不是发布时间，填进去会让旧页面显得很新，所以故意不填。每次抓取的耗时和时间点只进 debug 日志（`fetched in 312ms at 2026-10-29T…`），不塞进结果。
 - 同样的查询在 `cacheTtlMs`（默认 5 分钟）内直接吃缓存，不再出网。缓存只存完整成功的答案，降级的那次不存 —— 否则半小时内都拿不到更好的结果。
-- 走的是公开搜索页，不是官方接口。调太猛会被限流，这是这套方案的根本限制。
-- 搜不到就是空列表；只有全部引擎真失败才抛错。
+- 数据来源是公开搜索页而非官方接口，高频调用会被限流，这是该方案的固有限制。
+- 没有结果时返回空列表；只有全部引擎都失败才抛出错误。
 
 ### 兼容性
 
@@ -148,7 +148,7 @@ dsh 0.1.5-rc.2、`web` profile、Windows 上实测过。Node 22 和 24 都跑过
 
 如果这个插件帮你把搜索救回来了，点个 star 让下一个撞 401 的人也能搜到它：https://github.com/a1435473620/dsh-web-search-nokey
 
-这是这个仓库唯一想要的回报。别提 issue 说谢谢，把 issue 留给真问题。
+这是本仓库唯一的回报请求；issue 请留给实际问题。
 
 
 ## English
@@ -161,7 +161,7 @@ The problem it solves is narrow. In dsh, chat and search take different paths: c
 DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is invalid
 ```
 
-The plugin registers a credential-free `WebSearchProvider` on `ctx.web`. `web_fetch` was never broken — it is an anonymous fetcher with no credential step.
+The plugin registers a credential-free `WebSearchProvider` on `ctx.web`. `web_fetch` is not affected: it is an anonymous fetcher with no credential step.
 
 ### Install
 
@@ -169,7 +169,7 @@ The plugin registers a credential-free `WebSearchProvider` on `ctx.web`. `web_fe
 dsh plugin --profile web add github:a1435473620/dsh-web-search-nokey
 ```
 
-Takes effect immediately. Not `npm install -g`: this is a dsh plugin and belongs in the profile.
+It takes effect immediately, with no configuration change or restart. It is not `npm install -g`: this is a dsh plugin and belongs in the profile.
 
 Remove:
 
@@ -177,15 +177,15 @@ Remove:
 dsh plugin --profile web remove dsh-web-search-nokey
 ```
 
-### Don't delete the patch
+### What cordis.patch.yml does
 
-dsh allows exactly one search backend at a time. If you don't name one, it counts usable candidates — and the built-in provider always claims it is. Two candidates means `WEB_PROVIDER_AMBIGUOUS`, and search stops working entirely.
+dsh allows one active search backend at a time. When none is configured, dsh counts the usable candidates; the built-in provider always reports itself as usable, so two registered backends produce `WEB_PROVIDER_AMBIGUOUS` and search fails.
 
-`cordis.patch.yml` pins `web.searchProvider` to this plugin. That file is load-bearing.
+`cordis.patch.yml` in the package pins `web.searchProvider` to this plugin. If the file is removed, the plugin still loads, but backend selection is no longer determined.
 
 ### Usage
 
-Just use it. `web_search` routes here.
+No extra configuration is needed after install; `web_search` routes to this provider.
 
 Eight ids over seven sites, in fallback order, stopping once there are enough
 results:
@@ -194,7 +194,7 @@ results:
 Bing(RSS) → Bing(HTML) → Google → Yandex → Baidu → Sogou → DuckDuckGo → 360
 ```
 
-Bing has two legs; `bing`, `360`, `haosou` and `ddg` are aliases, so config can
+Bing has two sub-engines (RSS and HTML); `bing`, `360`, `haosou` and `ddg` are aliases, so config can
 be written in site names rather than ids.
 
 Roughly 200ms per query, eight results with snippets. One real call looks like this:
@@ -214,22 +214,22 @@ Baidu, Sogou and 360 mostly hand out `/link?url=…` shells; Bing hands out
 `/ck/a?u=…`. Those are expanded into the real address **server-side, before the
 result is returned**.
 
-The reason is practical: give a model a redirect shell and it will fetch the
-shell, land on an interstitial, and interstitials are where the ads are. Shells
-that fail to expand are dropped, never passed on — one result short beats one
-result that cannot be opened. `resolveRedirects` (default true) and `maxResolve`
+A model that receives a redirect shell will fetch it and land on an interstitial,
+which is where the ads are. Shells that fail to expand are dropped, so no
+unopenable link is returned. `resolveRedirects` (default true) and `maxResolve`
 (default 5) control it, and each engine's ad blocks (marked 广告 / 品牌推广 inside
 the block) are skipped during parsing.
 
 ### Google and exit nodes
 
-Google is "only if there is a route" by default. The plugin probes
-`generate_204` in the background and schedules Google only when that answers, so
-a machine without an exit node never pays for timeouts. `google: on` forces it.
+Google is enabled based on reachability by default: the plugin probes
+`generate_204` in the background and schedules Google only when the probe
+answers, so machines without an exit node produce no probe timeout. `google: on`
+forces it.
 
 ### Configuration
 
-Edit the profile's `cordis.patch.yml` if you need to. Most people won't.
+Edit the profile's `cordis.patch.yml` if a field needs changing.
 
 | Field | Default | Notes |
 | --- | --- | --- |
@@ -249,7 +249,7 @@ Edit the profile's `cordis.patch.yml` if you need to. Most people won't.
 | `proxy` | empty | e.g. `http://127.0.0.1:7897` |
 | `userAgent` | desktop Chrome | These pages turn away bare clients |
 
-`freshness` is honoured by Bing, Google, Baidu, Sogou and DuckDuckGo. Yandex and 360 have no documented no-JS parameter for it, so they get nothing rather than a guess.
+`freshness` is honoured by Bing, Google, Baidu, Sogou and DuckDuckGo; Yandex and 360 have no documented no-JS parameter, so no parameter is sent for them.
 
 Environment variables override the same fields with the `DSH_WEB_SEARCH_NOKEY_` prefix. `HTTPS_PROXY` / `HTTP_PROXY` are honoured too.
 
@@ -272,10 +272,10 @@ A block is not a malfunction, so it is recorded as a skip and the engine rests
 instead of raising `degraded` noise. The two reasons rest for different spans,
 because they are different problems:
 
-- **Captcha / consent wall** — the exit IP is burned; rests for `probeTtlMs`
+- **Captcha / consent wall** — the exit IP has been flagged; rests for `probeTtlMs`
   (ten minutes by default).
-- **429 / 503** — merely too fast; rests for whatever `Retry-After` asked for,
-  falling back to two minutes.
+- **429 / 503** — the request rate was too high; rests for whatever `Retry-After`
+  asked for, falling back to two minutes.
 
 Collapsing those into one ten-minute window means a routine rate limit silently
 takes an engine out for ten minutes, which reads as "Sogou just stopped working".
@@ -286,7 +286,7 @@ Also:
 
 - Most results have no date. Bing's RSS carries crawl time, not publish time; writing that through would make stale pages look fresh, so it's left out. When a fetch happened, and how long it took, goes to the debug log (`fetched in 312ms at 2026-10-29T…`) rather than onto the results.
 - An identical query inside `cacheTtlMs` (five minutes by default) is served from cache without touching the network. Only a clean answer is cached — a degraded one is not, or a bad minute would stick for the whole TTL.
-- Public result pages, not an official API. Heavy use gets rate-limited — that is the fundamental limit of this approach.
+- Public result pages, not an official API. Heavy use gets rate-limited; this is an inherent limit of using public result pages.
 - An empty result set is an empty list; only a total failure throws.
 
 ### Compatibility
