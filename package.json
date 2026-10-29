@@ -1,8 +1,8 @@
 {
   "name": "dsh-web-search-nokey",
   "displayName": "DSH Web Search (No Key)",
-  "version": "1.0.0",
-  "description": "Keyless web search for DeepSeek Harness. Fixes web_search 401 on Trae/WorkBuddy credits setups — no API key needed.",
+  "version": "1.1.0",
+  "description": "Keyless web search for DeepSeek Harness. Fixes web_search 401 on Trae/WorkBuddy credits setups — no API key needed. Bing, Google, Yandex and 360 with ordered fallback.",
   "license": "MIT",
   "author": "a1435473620",
   "type": "module",
@@ -39,7 +39,9 @@
   ],
   "scripts": {
     "smoke": "node test/smoke.mjs",
-    "test:seam": "node test/with-seam.mjs"
+    "test:parsers": "node test/parsers.mjs",
+    "test:seam": "node test/with-seam.mjs",
+    "live": "node test/live-engines.mjs"
   },
   "dsh": {
     "bundle": {

@@ -38,16 +38,47 @@ export interface SearchProvider {
 }
 
 /** Engine ids accepted in `engines`. */
-export type EngineId = 'bing-rss' | 'bing-html' | 'so360';
+export type EngineId =
+  | 'bing-rss'
+  | 'bing-html'
+  | 'google'
+  | 'yandex'
+  | 'baidu'
+  | 'sogou'
+  | 'duckduckgo'
+  | 'so360';
+
+/** Friendly names accepted in `engines`, expanded to ids. */
+export type EngineAlias = 'bing' | '360' | 'so' | 'haosou' | 'ddg' | 'duck';
+
+/** How Google is treated. `auto` gates it on a reachability probe. */
+export type GoogleMode = 'auto' | 'on' | 'off';
 
 /** The entry `config` block. Every field is optional. */
 export interface NokeySearchConfig {
-  /** Fallback order. Defaults to `['bing-rss', 'bing-html', 'so360']`. */
-  engines?: EngineId[] | string;
+  /**
+   * Fallback order. Defaults to
+   * `['bing-rss', 'bing-html', 'google', 'yandex', 'baidu', 'sogou', 'duckduckgo', 'so360']`.
+   * `bing` expands to both Bing legs; `360`, `haosou` and `so` to `so360`.
+   */
+  engines?: EngineId[] | EngineAlias[] | string;
   /** Upper bound per search. Defaults to 8. The seam caps the result too. */
   maxResults?: number;
   /** Per upstream request, milliseconds. Defaults to 12000. */
   timeoutMs?: number;
+  /** Wall-clock ceiling for one search across all engines. Defaults to 25000. */
+  budgetMs?: number;
+  /** How long a Google reachability verdict is trusted. Defaults to 600000. */
+  probeTtlMs?: number;
+  /** `auto` (default) skips Google when unreachable; `on` always tries it. */
+  google?: GoogleMode;
+  /**
+   * Expand `baidu.com/link`, `sogou.com/link`, `bing.com/ck/a` and friends into
+   * the real address. Defaults to true; shells that do not expand are dropped.
+   */
+  resolveRedirects?: boolean;
+  /** How many shells to expand per search. Defaults to 5. */
+  maxResolve?: number;
   /** HTTP proxy, e.g. `http://127.0.0.1:7897`. Falls back to `HTTPS_PROXY`. */
   proxy?: string;
   /** Override the default desktop Chrome user agent. */
@@ -62,11 +93,16 @@ export declare const DEFAULTS: {
   readonly engines: readonly EngineId[];
   readonly maxResults: 8;
   readonly timeoutMs: 12000;
+  readonly budgetMs: 25000;
+  readonly probeTtlMs: 600000;
+  readonly google: 'auto';
+  readonly resolveRedirects: true;
+  readonly maxResolve: 5;
   readonly proxy: '';
   readonly userAgent: string;
 };
 
-/** Environment override prefix: `DSH_WEB_SEARCH_NOKEY_ENGINES`, `_MAX_RESULTS`, `_TIMEOUT_MS`, `_PROXY`. */
+/** Environment override prefix: `DSH_WEB_SEARCH_NOKEY_ENGINES`, `_MAX_RESULTS`, `_TIMEOUT_MS`, `_BUDGET_MS`, `_PROBE_TTL_MS`, `_GOOGLE`, `_RESOLVE`, `_MAX_RESOLVE`, `_PROXY`. */
 export declare const ENV_PREFIX: 'DSH_WEB_SEARCH_NOKEY_';
 
 /** Resolve the entry config, the environment, and the defaults into one settings object. */
@@ -74,6 +110,11 @@ export declare function resolveConfig(config?: NokeySearchConfig): Required<{
   engines: EngineId[];
   maxResults: number;
   timeoutMs: number;
+  budgetMs: number;
+  probeTtlMs: number;
+  google: GoogleMode;
+  resolveRedirects: boolean;
+  maxResolve: number;
   proxy: string;
   userAgent: string;
 }>;

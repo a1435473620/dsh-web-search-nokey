@@ -46,7 +46,27 @@ dsh 的搜索后端同一时间只能选一个。不显式指定，它会去数�
 
 直接用。`web_search` 会路由到这里。
 
-三个后端按顺序兜底，条数够了就停：Bing RSS → Bing 网页 → 360。直连大约 200ms，返回 8 条带摘要的结果。
+默认八个 id、七个站点，按顺序兜底，条数够了就停：
+
+```
+Bing(RSS) → Bing(网页) → Google → Yandex → 百度 → 搜狗 → DuckDuckGo → 360
+```
+
+Bing 内部是两条腿；`bing`、`360`、`haosou`、`ddg` 都是别名，配置里写成站点名就行。
+
+直连大约 200ms，返回 8 条带摘要的结果。
+
+### 重定向会先展开
+
+百度、搜狗、360 给的常是 `/link?url=…` 跳转壳，Bing 给的是 `/ck/a?u=…`。这些壳会**先在服务端展开成真实地址**再返回。
+
+理由很实际：把跳转壳丢给模型，模型会去 fetch 它，落到中间页上，而中间页往往就是广告。展开失败的直接丢弃，绝不下发——宁可少一条，也不给一条打不开的。
+
+由 `resolveRedirects`（默认开）和 `maxResolve`（默认 5 条/次）控制。各站点的广告块（带“广告”“品牌推广”标记的）也在解析阶段就跳过。
+
+### Google 与出口节点
+
+Google 默认「有路才用」。插件在后台先探一次 `generate_204`，通了才把它排进这一轮，所以没有出口节点的机器不会为超时付钱。想强制打开就写 `google: on`。
 
 ### 配置
 
@@ -54,9 +74,14 @@ dsh 的搜索后端同一时间只能选一个。不显式指定，它会去数�
 
 | 字段 | 默认 | 说明 |
 | --- | --- | --- |
-| `engines` | `bing-rss, bing-html, so360` | 顺序即兜底顺序 |
+| `engines` | `bing-rss, bing-html, google, yandex, baidu, sogou, duckduckgo, so360` | 顺序即兜底顺序；支持 `bing`、`360`、`haosou`、`ddg` 别名 |
 | `maxResults` | `8` | 单次上限 |
 | `timeoutMs` | `12000` | 单个上游请求超时 |
+| `budgetMs` | `25000` | 一次搜索的总时间上限，防止多层超时叠加 |
+| `google` | `auto` | `auto` 探测可达性 / `on` 强制 / `off` 关闭 |
+| `probeTtlMs` | `600000` | 可达性结论与「冷却」的有效期 |
+| `resolveRedirects` | `true` | 展开跳转壳；关掉则直接丢弃壳 |
+| `maxResolve` | `5` | 单次最多展开几条壳 |
 | `proxy` | 空 | 需要代理时填，例如 `http://127.0.0.1:7897` |
 | `userAgent` | 桌面 Chrome | 这些搜索页会拦裸客户端 |
 
@@ -64,15 +89,31 @@ dsh 的搜索后端同一时间只能选一个。不显式指定，它会去数�
 
 ### 已知问题
 
+站点是否可用，跟你的出口 IP 关系极大。2026-10 在一台大陆机器上实测：
+
+| 站点 | 状态 |
+| --- | --- |
+| Bing | 稳，10 条 / 约 200ms |
+| 360 | 稳，能解壳，5-6 条 |
+| 搜狗 | 第一次能出结果，连着查几次就被限流 |
+| 百度 | 基本直接回「百度安全验证」 |
+| Yandex | 回 SmartCaptcha（HTTP 200 + 验证码页） |
+| Google / DuckDuckGo | 不通，需要出口节点 |
+| 多吉（dogedoge） | 站点本身连不上，没接 |
+
+被拦不是故障，所以插件把它记作「跳过」而不是「失败」，并让该引擎冷却 10 分钟；日志里是 `engine=xxx blocked`，不会污染 `degraded` 告警。全部引擎都真失败才抛错。
+
+其余：
+
 - 多数结果没有日期。Bing RSS 给的是抓取时间不是发布时间，填进去会让旧页面显得很新，所以故意不填。
-- Bing RSS 一般只回 9 条，所以才需要第二个后端补。
-- 360 的链接是跳转壳，点一下才到真实页面。它只是兜底。
-- 走的是公开搜索页，不是官方接口。调太猛可能被限流；日志里会记 `engine=xxx failed`，然后自动换下一个后端。
-- 搜不到就是空列表，不报错。
+- 走的是公开搜索页，不是官方接口。调太猛会被限流，这是这套方案的根本限制。
+- 搜不到就是空列表；只有全部引擎真失败才抛错。
 
 ### 兼容性
 
 dsh 0.1.5-rc.2、`web` profile、Windows 上实测过。Node 22 和 24 都跑过。
+
+想确认某个站点在你这条网络上到底通不通，在仓库里跑 `npm run live`（可只测一个：`npm run live google`）。它会逐个引擎打真实请求，打印条数、耗时和自链数量——`BLOCK` 表示吃到验证码，`FAIL` 表示真连不上。Google 和 Yandex 的解析逻辑，只能在能连到它们的机器上用这条命令验。
 
 ## English
 
@@ -112,7 +153,36 @@ dsh allows exactly one search backend at a time. If you don't name one, it count
 
 Just use it. `web_search` routes here.
 
-Three backends in fallback order, stopping once there are enough results: Bing RSS → Bing HTML → 360. Roughly 200ms per query, eight results with snippets.
+Eight ids over seven sites, in fallback order, stopping once there are enough
+results:
+
+```
+Bing(RSS) → Bing(HTML) → Google → Yandex → Baidu → Sogou → DuckDuckGo → 360
+```
+
+Bing has two legs; `bing`, `360`, `haosou` and `ddg` are aliases, so config can
+be written in site names rather than ids.
+
+Roughly 200ms per query, eight results with snippets.
+
+### Redirects are expanded first
+
+Baidu, Sogou and 360 mostly hand out `/link?url=…` shells; Bing hands out
+`/ck/a?u=…`. Those are expanded into the real address **server-side, before the
+result is returned**.
+
+The reason is practical: give a model a redirect shell and it will fetch the
+shell, land on an interstitial, and interstitials are where the ads are. Shells
+that fail to expand are dropped, never passed on — one result short beats one
+result that cannot be opened. `resolveRedirects` (default true) and `maxResolve`
+(default 5) control it, and each engine's ad blocks (marked 广告 / 品牌推广 inside
+the block) are skipped during parsing.
+
+### Google and exit nodes
+
+Google is "only if there is a route" by default. The plugin probes
+`generate_204` in the background and schedules Google only when that answers, so
+a machine without an exit node never pays for timeouts. `google: on` forces it.
 
 ### Configuration
 
@@ -120,9 +190,14 @@ Edit the profile's `cordis.patch.yml` if you need to. Most people won't.
 
 | Field | Default | Notes |
 | --- | --- | --- |
-| `engines` | `bing-rss, bing-html, so360` | Order is fallback order |
+| `engines` | `bing-rss, bing-html, google, yandex, baidu, sogou, duckduckgo, so360` | Order is fallback order; `bing`, `360`, `haosou`, `ddg` are aliases |
 | `maxResults` | `8` | Per-query cap |
 | `timeoutMs` | `12000` | Per upstream request |
+| `budgetMs` | `25000` | Wall-clock ceiling for one search |
+| `google` | `auto` | `auto` probes reachability, `on` forces, `off` disables |
+| `probeTtlMs` | `600000` | How long a verdict and a cooldown stand |
+| `resolveRedirects` | `true` | Expand shells; off means discard them |
+| `maxResolve` | `5` | Shells expanded per search |
 | `proxy` | empty | e.g. `http://127.0.0.1:7897` |
 | `userAgent` | desktop Chrome | These pages turn away bare clients |
 
@@ -130,15 +205,34 @@ Environment variables override the same fields with the `DSH_WEB_SEARCH_NOKEY_` 
 
 ### Known issues
 
+Whether a site works depends heavily on your exit IP. Measured in October 2026
+from a machine in mainland China:
+
+| Site | State |
+| --- | --- |
+| Bing | solid, 10 rows, ~200ms |
+| 360 | solid, shells unwrapped, 5-6 rows |
+| Sogou | first query works, then rate-limits |
+| Baidu | answers with its security check |
+| Yandex | SmartCaptcha (HTTP 200 with a captcha page) |
+| Google / DuckDuckGo | unreachable without an exit node |
+| dogedoge | the site itself does not answer; not wired up |
+
+A block is not a malfunction, so it is recorded as a skip and the engine rests
+for ten minutes — the log says `engine=xxx blocked` instead of raising
+`degraded` noise. The error only surfaces when every engine genuinely failed.
+
+Also:
+
 - Most results have no date. Bing's RSS carries crawl time, not publish time; writing that through would make stale pages look fresh, so it's left out.
-- Bing RSS returns about nine items, which is why the second backend exists.
-- The 360 backend returns redirect links that only resolve on click. It's a fallback.
-- Public result pages, not an official API. Heavy use may get rate-limited; failures log as `engine=xxx failed` and the next backend is tried.
-- An empty result set is an empty list, not an error.
+- Public result pages, not an official API. Heavy use gets rate-limited — that is the fundamental limit of this approach.
+- An empty result set is an empty list; only a total failure throws.
 
 ### Compatibility
 
 Tested on dsh 0.1.5-rc.2, `web` profile, Windows, Node 24 and 22.
+
+To find out whether a given site is reachable on your network, run `npm run live` in the repo (or `npm run live google` for one engine). It hits each engine for real and prints row count, latency and self-link count — `BLOCK` means a captcha, `FAIL` means it genuinely did not connect. The Google and Yandex parsers can only be verified this way on a machine that can reach them.
 
 ## License
 

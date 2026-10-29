@@ -39,8 +39,16 @@
 
       # Defaults are compiled in; uncomment to change per profile.
       #
-      # engines: [bing-rss, bing-html, so360]  # order = fallback order
+      # engines: [bing-rss, bing-html, google, yandex, baidu, sogou, duckduckgo, so360]
+      #          # order = fallback order; `bing`, `360`, `haosou`, `ddg` are aliases
       # maxResults: 8                          # upper bound, also capped by the seam
       # timeoutMs: 12000                       # per upstream request
+      # budgetMs: 25000                        # ceiling for the whole search
+      # google: auto                           # auto | on | off
+      #          # auto skips Google unless a reachability probe succeeds, so a
+      #          # machine without an exit node does not pay for timeouts
+      # probeTtlMs: 600000                     # how long a Google verdict is trusted
+      # resolveRedirects: true                 # expand /link?url= and /ck/a shells
+      # maxResolve: 5                          # shells expanded per search
       # proxy: ''                              # e.g. http://127.0.0.1:7897
       # userAgent: ''                          # override the desktop Chrome UA
