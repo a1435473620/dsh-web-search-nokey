@@ -42,6 +42,7 @@
       # engines: [bing-rss, bing-html, google, yandex, baidu, sogou, duckduckgo, so360]
       #          # order = fallback order; `bing`, `360`, `haosou`, `ddg` are aliases
       # maxResults: 8                          # upper bound, also capped by the seam
+      # maxPerHost: 3                          # how many rows one site may fill; 0 = no cap
       # timeoutMs: 12000                       # per upstream request
       # budgetMs: 25000                        # ceiling for the whole search
       # google: auto                           # auto | on | off
@@ -50,5 +51,13 @@
       # probeTtlMs: 600000                     # how long a Google verdict is trusted
       # resolveRedirects: true                 # expand /link?url= and /ck/a shells
       # maxResolve: 5                          # shells expanded per search
+      # freshness: ''                          # day | week | month | year; '' = any time
+      #          # Bing, Google, Baidu, Sogou and DuckDuckGo honour it; Yandex
+      #          # and 360 have no usable no-JS parameter and ignore it
+      # locale: auto                           # BCP-47 tag, or auto
+      #          # auto follows the query's script and otherwise the language
+      #          # dsh runs in; write e.g. en-US to pin it
+      # cacheTtlMs: 300000                     # result cache TTL; 0 turns it off
+      # cacheMax: 100                          # cache entries, LRU-evicted
       # proxy: ''                              # e.g. http://127.0.0.1:7897
       # userAgent: ''                          # override the desktop Chrome UA

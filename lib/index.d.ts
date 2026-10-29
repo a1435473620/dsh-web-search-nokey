@@ -54,6 +54,9 @@ export type EngineAlias = 'bing' | '360' | 'so' | 'haosou' | 'ddg' | 'duck';
 /** How Google is treated. `auto` gates it on a reachability probe. */
 export type GoogleMode = 'auto' | 'on' | 'off';
 
+/** How far back a search may reach. Empty means "no restriction". */
+export type Freshness = '' | 'day' | 'week' | 'month' | 'year';
+
 /** The entry `config` block. Every field is optional. */
 export interface NokeySearchConfig {
   /**
@@ -79,6 +82,26 @@ export interface NokeySearchConfig {
   resolveRedirects?: boolean;
   /** How many shells to expand per search. Defaults to 5. */
   maxResolve?: number;
+  /**
+   * How many results one site may contribute, so eight rows are eight sources
+   * rather than eight pages from one forum. Defaults to 3; 0 disables the cap.
+   */
+  maxPerHost?: number;
+  /**
+   * Restrict results to a recent window. Defaults to `''` (no restriction);
+   * `7d`, `w` and `week` are all accepted for `week`.
+   */
+  freshness?: Freshness | string;
+  /**
+   * BCP-47 tag used for `Accept-Language` and each engine's language
+   * parameter. Defaults to `auto`: the query's script decides, falling back to
+   * the language dsh itself runs in. `auto` never needs to be written out.
+   */
+  locale?: string;
+  /** Result cache TTL in milliseconds. Defaults to 300000; 0 disables it. */
+  cacheTtlMs?: number;
+  /** Cache entry ceiling, evicted least-recently-used first. Defaults to 100. */
+  cacheMax?: number;
   /** HTTP proxy, e.g. `http://127.0.0.1:7897`. Falls back to `HTTPS_PROXY`. */
   proxy?: string;
   /** Override the default desktop Chrome user agent. */
@@ -98,11 +121,16 @@ export declare const DEFAULTS: {
   readonly google: 'auto';
   readonly resolveRedirects: true;
   readonly maxResolve: 5;
+  readonly maxPerHost: 3;
+  readonly freshness: '';
+  readonly locale: 'auto';
+  readonly cacheTtlMs: 300000;
+  readonly cacheMax: 100;
   readonly proxy: '';
   readonly userAgent: string;
 };
 
-/** Environment override prefix: `DSH_WEB_SEARCH_NOKEY_ENGINES`, `_MAX_RESULTS`, `_TIMEOUT_MS`, `_BUDGET_MS`, `_PROBE_TTL_MS`, `_GOOGLE`, `_RESOLVE`, `_MAX_RESOLVE`, `_PROXY`. */
+/** Environment override prefix: `DSH_WEB_SEARCH_NOKEY_ENGINES`, `_MAX_RESULTS`, `_TIMEOUT_MS`, `_BUDGET_MS`, `_PROBE_TTL_MS`, `_GOOGLE`, `_RESOLVE`, `_MAX_RESOLVE`, `_MAX_PER_HOST`, `_FRESHNESS`, `_LOCALE`, `_CACHE_TTL_MS`, `_CACHE_MAX`, `_PROXY`. */
 export declare const ENV_PREFIX: 'DSH_WEB_SEARCH_NOKEY_';
 
 /** Resolve the entry config, the environment, and the defaults into one settings object. */
@@ -115,9 +143,23 @@ export declare function resolveConfig(config?: NokeySearchConfig): Required<{
   google: GoogleMode;
   resolveRedirects: boolean;
   maxResolve: number;
+  maxPerHost: number;
+  freshness: Freshness;
+  locale: string;
+  cacheTtlMs: number;
+  cacheMax: number;
   proxy: string;
   userAgent: string;
 }>;
+
+/** The script a query is written in, or `''` for a Latin one. */
+export declare function scriptOf(text: string): '' | 'zh' | 'ja' | 'ko' | 'ru' | 'ar' | 'he' | 'th';
+
+/** The locale the runtime itself is running in, e.g. `zh-CN`. */
+export declare function harnessLocale(): string;
+
+/** Which language to search in, given the config setting and the query. */
+export declare function resolveLocale(setting: string, query?: string): string;
 
 export declare class KeylessSearchProvider implements SearchProvider {
   readonly id: 'dsh-web-search-nokey';

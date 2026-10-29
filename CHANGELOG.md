@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.2.0
+
+Robustness rather than reach: the same seven sites, asked more carefully and
+less often.
+
+Added:
+
+- **`maxPerHost`** (default 3). Dedupe was already keyed on host + path, so one
+  forum could fill all eight slots. The cap keeps first-seen order, so the
+  survivors are still the highest-ranked rows. Applied again after shell
+  expansion, because three different shells can land on one site.
+- **`freshness`** (`day`/`week`/`month`/`year`, plus `7d`/`w` spellings) mapped
+  per engine: Bing `filters=ex1:"ezN"`, Google `tbs=qdr:`, Baidu `gpc=stf=…`
+  epoch range, Sogou `tsn=`, DuckDuckGo `df=`. Yandex and 360 get nothing —
+  neither documents a no-JS parameter, and a guessed parameter is worse than
+  none on engines that treat unknown parameters as filters.
+- **`locale`** (default `auto`). Resolution order: an explicit tag, then the
+  query's script when it disagrees with the harness, then the language the
+  runtime itself reports via `Intl.DateTimeFormat().resolvedOptions()`. Drives
+  `Accept-Language`, Google `hl`, Bing `setlang`+`mkt`, DuckDuckGo `kl`. The old
+  hard-coded `hl=zh-CN` is gone.
+- **Result cache** (`cacheTtlMs`, default 300000; `cacheMax`, default 100,
+  LRU). Keyed on the query plus every option that changes the answer — engine
+  list, `maxResults`, `freshness`, `locale`, `google` — because a cache that
+  ignores one of those starts lying. Degraded answers are deliberately not
+  cached.
+
+Changed:
+
+- **`429`/`503` now rests the engine** for whatever `Retry-After` asked for,
+  falling back to two minutes. Previously a rate limit was an ordinary error
+  and the engine was retried on the very next query; a captcha still rests for
+  `probeTtlMs`. `cooldowns` stores an expiry instead of a start time, and
+  `isCooling(id)` no longer takes a TTL.
+- **One retry** on a connection that died mid-flight (ECONNRESET, EPIPE,
+  `EAI_AGAIN`, socket timeout), with 120–300ms jittered backoff. ABORT, a
+  refused proxy CONNECT and an oversized body are not retried.
+- **Response decoding sniffs the charset** from `Content-Type`, then
+  `<meta charset>`, then falls back to utf-8. A GBK page decoded as utf-8 does
+  not throw — it produces mojibake that every parser reports as "no usable
+  rows", which looks exactly like being blocked.
+- Search timing is logged: `fetched in 312ms at <iso>` for a live answer, and
+  the age for a cached one. Per-result fetch times are not added — the seam's
+  source shape has no field for them.
+
 ## 1.1.0
 
 Five engines added, redirect shells expanded server-side, and three defects that

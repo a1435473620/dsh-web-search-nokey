@@ -23,7 +23,20 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import * as plugin from '../lib/index.js';
-import { dedupe, dedupeKey, expandEngines, ENGINE_ALIASES, ENGINES } from '../lib/search.js';
+import {
+  capPerHost,
+  clearCache,
+  cacheSize,
+  dedupe,
+  dedupeKey,
+  expandEngines,
+  freshnessParam,
+  localeParam,
+  normalizeFreshness,
+  retryAfterMs,
+  ENGINE_ALIASES,
+  ENGINES,
+} from '../lib/search.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -134,6 +147,98 @@ check('redirect expansion can be switched off by name or number', () => {
 
 check('maxResolve takes positive integers only', () => {
   assert.equal(registerWith({ maxResolve: 0 }).resolveConfig().maxResolve, plugin.DEFAULTS.maxResolve);
+});
+
+console.log('\nrobustness knobs');
+
+check('maxPerHost defaults to 3, and 0 is honoured as "no cap"', () => {
+  assert.equal(registerWith({}).resolveConfig().maxPerHost, 3);
+  assert.equal(registerWith({ maxPerHost: 0 }).resolveConfig().maxPerHost, 0);
+});
+
+check('one site cannot fill every slot', () => {
+  const rows = Array.from({ length: 6 }, (_, i) => ({ url: `https://forum.example/t/${i}` }));
+  rows.push({ url: 'https://other.example/a' });
+  const capped = capPerHost(rows, 2);
+  assert.equal(capped.length, 3);
+  assert.equal(capped.filter((r) => r.url.includes('forum.example')).length, 2);
+  // First-seen order survives, so the kept rows are the top-ranked ones.
+  assert.match(capped[0].url, /\/t\/0$/);
+});
+
+check('www. does not make a second site, a sub-domain does', () => {
+  const capped = capPerHost(
+    [
+      { url: 'https://www.example.com/a' },
+      { url: 'https://example.com/b' },
+      { url: 'https://docs.example.com/c' },
+    ],
+    1,
+  );
+  assert.deepEqual(
+    capped.map((r) => r.url),
+    ['https://www.example.com/a', 'https://docs.example.com/c'],
+  );
+});
+
+check('freshness accepts the spellings people type', () => {
+  assert.equal(normalizeFreshness('7d'), 'week');
+  assert.equal(normalizeFreshness('W'), 'week');
+  assert.equal(normalizeFreshness('month'), 'month');
+  assert.equal(normalizeFreshness(''), '');
+  assert.equal(normalizeFreshness('off'), '');
+  assert.equal(normalizeFreshness('yesterday-ish'), '');
+});
+
+check('freshness maps per engine, and engines without one get nothing', () => {
+  assert.match(freshnessParam('bing', 'day'), /filters=ex1%3A%22ez1%22/);
+  assert.equal(freshnessParam('google', 'week'), '&tbs=qdr:w');
+  assert.equal(freshnessParam('sogou', 'month'), '&tsn=3');
+  assert.equal(freshnessParam('duckduckgo', 'year'), '&df=y');
+  assert.match(freshnessParam('baidu', 'day', 1_700_000_000_000), /gpc=stf%3D\d+%2C\d+/);
+  assert.equal(freshnessParam('yandex', 'day'), '');
+  assert.equal(freshnessParam('so360', 'day'), '');
+  // Bing has no year filter; sending the month code would be a wrong answer.
+  assert.equal(freshnessParam('bing', 'year'), '');
+});
+
+check('locale defaults to auto and reaches the engines as a tag', () => {
+  assert.equal(registerWith({}).resolveConfig().locale, 'auto');
+  assert.equal(registerWith({ locale: 'en-GB' }).resolveConfig().locale, 'en-GB');
+  assert.equal(localeParam('google', 'en-US'), '&hl=en-US');
+  assert.equal(localeParam('bing', 'zh-CN'), '&setlang=zh-Hans&mkt=zh-CN');
+  assert.equal(localeParam('duckduckgo', 'zh-CN'), '&kl=cn-zh');
+  assert.equal(localeParam('baidu', 'en-US'), '');
+});
+
+check('the harness language is the fallback, the query script can override it', () => {
+  const harness = plugin.harnessLocale();
+  assert.ok(harness, 'Intl reported no locale at all');
+  // Same script as the harness: keep the harness tag verbatim.
+  const cjk = harness.toLowerCase().startsWith('zh') ? '今天天气' : 'weather today';
+  assert.equal(plugin.resolveLocale('auto', cjk), harness);
+  // A query in a script the harness does not speak wins.
+  if (!harness.toLowerCase().startsWith('ru')) {
+    assert.equal(plugin.resolveLocale('auto', 'погода сегодня'), 'ru-RU');
+  }
+  assert.equal(plugin.resolveLocale('en-GB', '今天天气'), 'en-GB');
+});
+
+check('Retry-After is read as seconds or as an HTTP date', () => {
+  assert.equal(retryAfterMs({ 'retry-after': '30' }, 999), 30_000);
+  assert.equal(retryAfterMs({}, 2_000), 2_000);
+  const at = new Date(Date.now() + 12_000).toUTCString();
+  const parsed = retryAfterMs({ 'retry-after': at }, 999);
+  assert.ok(parsed > 5_000 && parsed <= 12_000, `parsed ${parsed}`);
+  // A silly value must not park an engine for a day.
+  assert.equal(retryAfterMs({ 'retry-after': '99999' }, 1_000), 30 * 60_000);
+});
+
+check('the cache can be switched off with 0', () => {
+  assert.equal(registerWith({}).resolveConfig().cacheTtlMs, 300_000);
+  assert.equal(registerWith({ cacheTtlMs: 0 }).resolveConfig().cacheTtlMs, 0);
+  clearCache();
+  assert.equal(cacheSize(), 0);
 });
 
 console.log('\ndedupe keys');

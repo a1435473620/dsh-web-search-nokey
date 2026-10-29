@@ -76,14 +76,21 @@ Google 默认「有路才用」。插件在后台先探一次 `generate_204`，�
 | --- | --- | --- |
 | `engines` | `bing-rss, bing-html, google, yandex, baidu, sogou, duckduckgo, so360` | 顺序即兜底顺序；支持 `bing`、`360`、`haosou`、`ddg` 别名 |
 | `maxResults` | `8` | 单次上限 |
+| `maxPerHost` | `3` | 同一站点最多占几条；`0` 关闭。八个槽位不该被一个论坛占满 |
 | `timeoutMs` | `12000` | 单个上游请求超时 |
 | `budgetMs` | `25000` | 一次搜索的总时间上限，防止多层超时叠加 |
 | `google` | `auto` | `auto` 探测可达性 / `on` 强制 / `off` 关闭 |
-| `probeTtlMs` | `600000` | 可达性结论与「冷却」的有效期 |
+| `probeTtlMs` | `600000` | 可达性结论与「验证码冷却」的有效期 |
 | `resolveRedirects` | `true` | 展开跳转壳；关掉则直接丢弃壳 |
 | `maxResolve` | `5` | 单次最多展开几条壳 |
+| `freshness` | 空 | `day`/`week`/`month`/`year`，`7d`、`w` 这类写法也认；空表示不限时间 |
+| `locale` | `auto` | `auto` 跟着查询的语言走，再退回 dsh 自己的界面语言；也可写死 `en-US` 之类 |
+| `cacheTtlMs` | `300000` | 结果缓存时长；`0` 关闭 |
+| `cacheMax` | `100` | 缓存条目上限，超出按最近最少使用淘汰 |
 | `proxy` | 空 | 需要代理时填，例如 `http://127.0.0.1:7897` |
 | `userAgent` | 桌面 Chrome | 这些搜索页会拦裸客户端 |
+
+`freshness` 只有 Bing、Google、百度、搜狗、DuckDuckGo 认；Yandex 和 360 没有可用的无 JS 参数，宁可传空也不猜一个错的。
 
 环境变量同样这几项，前缀 `DSH_WEB_SEARCH_NOKEY_`。`HTTPS_PROXY` / `HTTP_PROXY` 也认。
 
@@ -101,11 +108,19 @@ Google 默认「有路才用」。插件在后台先探一次 `generate_204`，�
 | Google / DuckDuckGo | 不通，需要出口节点 |
 | 多吉（dogedoge） | 站点本身连不上，没接 |
 
-被拦不是故障，所以插件把它记作「跳过」而不是「失败」，并让该引擎冷却 10 分钟；日志里是 `engine=xxx blocked`，不会污染 `degraded` 告警。全部引擎都真失败才抛错。
+被拦不是故障，所以插件把它记作「跳过」而不是「失败」，不会污染 `degraded` 告警。全部引擎都真失败才抛错。
+
+冷却分两种，因为原因不一样：
+
+- **验证码 / 同意墙**：出口 IP 被烧了，冷却 `probeTtlMs`（默认 10 分钟）
+- **429 / 503 限流**：只是问得太快，按响应里的 `Retry-After` 冷却；没给这个头就退到 2 分钟
+
+把两者混成一个「10 分钟」的后果是：一次正常的限流会让引擎静默十分钟，用户看到的是「搜狗怎么突然不能用了」。
 
 其余：
 
-- 多数结果没有日期。Bing RSS 给的是抓取时间不是发布时间，填进去会让旧页面显得很新，所以故意不填。
+- 多数结果没有日期。Bing RSS 给的是抓取时间不是发布时间，填进去会让旧页面显得很新，所以故意不填。每次抓取的耗时和时间点只进 debug 日志（`fetched in 312ms at 2026-10-29T…`），不塞进结果。
+- 同样的查询在 `cacheTtlMs`（默认 5 分钟）内直接吃缓存，不再出网。缓存只存完整成功的答案，降级的那次不存 —— 否则半小时内都拿不到更好的结果。
 - 走的是公开搜索页，不是官方接口。调太猛会被限流，这是这套方案的根本限制。
 - 搜不到就是空列表；只有全部引擎真失败才抛错。
 
@@ -192,14 +207,21 @@ Edit the profile's `cordis.patch.yml` if you need to. Most people won't.
 | --- | --- | --- |
 | `engines` | `bing-rss, bing-html, google, yandex, baidu, sogou, duckduckgo, so360` | Order is fallback order; `bing`, `360`, `haosou`, `ddg` are aliases |
 | `maxResults` | `8` | Per-query cap |
+| `maxPerHost` | `3` | Rows one site may contribute; `0` disables the cap |
 | `timeoutMs` | `12000` | Per upstream request |
 | `budgetMs` | `25000` | Wall-clock ceiling for one search |
 | `google` | `auto` | `auto` probes reachability, `on` forces, `off` disables |
-| `probeTtlMs` | `600000` | How long a verdict and a cooldown stand |
+| `probeTtlMs` | `600000` | How long a reachability verdict and a captcha cooldown stand |
 | `resolveRedirects` | `true` | Expand shells; off means discard them |
 | `maxResolve` | `5` | Shells expanded per search |
+| `freshness` | empty | `day`/`week`/`month`/`year`; empty means any time |
+| `locale` | `auto` | `auto` follows the query's script, then the language dsh runs in |
+| `cacheTtlMs` | `300000` | Result cache TTL; `0` turns the cache off |
+| `cacheMax` | `100` | Cache entries, evicted least-recently-used first |
 | `proxy` | empty | e.g. `http://127.0.0.1:7897` |
 | `userAgent` | desktop Chrome | These pages turn away bare clients |
+
+`freshness` is honoured by Bing, Google, Baidu, Sogou and DuckDuckGo. Yandex and 360 have no documented no-JS parameter for it, so they get nothing rather than a guess.
 
 Environment variables override the same fields with the `DSH_WEB_SEARCH_NOKEY_` prefix. `HTTPS_PROXY` / `HTTP_PROXY` are honoured too.
 
@@ -219,12 +241,23 @@ from a machine in mainland China:
 | dogedoge | the site itself does not answer; not wired up |
 
 A block is not a malfunction, so it is recorded as a skip and the engine rests
-for ten minutes — the log says `engine=xxx blocked` instead of raising
-`degraded` noise. The error only surfaces when every engine genuinely failed.
+instead of raising `degraded` noise. The two reasons rest for different spans,
+because they are different problems:
+
+- **Captcha / consent wall** — the exit IP is burned; rests for `probeTtlMs`
+  (ten minutes by default).
+- **429 / 503** — merely too fast; rests for whatever `Retry-After` asked for,
+  falling back to two minutes.
+
+Collapsing those into one ten-minute window means a routine rate limit silently
+takes an engine out for ten minutes, which reads as "Sogou just stopped working".
+
+The error only surfaces when every engine genuinely failed.
 
 Also:
 
-- Most results have no date. Bing's RSS carries crawl time, not publish time; writing that through would make stale pages look fresh, so it's left out.
+- Most results have no date. Bing's RSS carries crawl time, not publish time; writing that through would make stale pages look fresh, so it's left out. When a fetch happened, and how long it took, goes to the debug log (`fetched in 312ms at 2026-10-29T…`) rather than onto the results.
+- An identical query inside `cacheTtlMs` (five minutes by default) is served from cache without touching the network. Only a clean answer is cached — a degraded one is not, or a bad minute would stick for the whole TTL.
 - Public result pages, not an official API. Heavy use gets rate-limited — that is the fundamental limit of this approach.
 - An empty result set is an empty list; only a total failure throws.
 
