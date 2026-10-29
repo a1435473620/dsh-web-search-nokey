@@ -1,6 +1,9 @@
 # dsh-web-search-nokey
 
-给 dsh 一个不用 API key 的搜索。
+[![GitHub stars](https://img.shields.io/github/stars/a1435473620/dsh-web-search-nokey?style=flat)](https://github.com/a1435473620/dsh-web-search-nokey)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
+给 dsh 一个不用 API key 的搜索：七个站点按序兜底，跳转壳先展开成真实地址再交出去。
 
 用 Trae 积分 / WorkBuddy 积分把模型接进 dsh 的人，大概率撞过这个：
 
@@ -9,6 +12,12 @@ DeepSeek API error (HTTP 401): Authentication Fails, Your api key: ****1b24 is i
 ```
 
 聊天是好的，`web_search` 一直 401。装完这个插件就好了，不需要任何 key。
+
+- **不用 key** —— 查询直接打公开搜索页，全程不碰 `DEEPSEEK_API_KEY`
+- **七个站点** —— Bing / Google / Yandex / 百度 / 搜狗 / DuckDuckGo / 360，按顺序兜底，凑够条数就停
+- **给模型真地址** —— 百度搜狗 360 的 `/link?url=`、Bing 的 `/ck/a` 在服务端就展开掉，模型不会落到中间页和广告上
+- **直连 200–500ms** —— 不用等满八个引擎，Bing 命中就够了
+- **一个依赖都没有** —— 纯 ESM，没有构建步骤，装的时候不跑脚本
 
 [中文](#中文) · [English](#english)
 
@@ -54,7 +63,16 @@ Bing(RSS) → Bing(网页) → Google → Yandex → 百度 → 搜狗 → DuckD
 
 Bing 内部是两条腿；`bing`、`360`、`haosou`、`ddg` 都是别名，配置里写成站点名就行。
 
-直连大约 200ms，返回 8 条带摘要的结果。
+直连大约 200ms，返回 8 条带摘要的结果。一次真实调用长这样：
+
+```text
+> web_search "cordis plugin lifecycle"
+
+3 条 · 502ms
+1. Welcome to Cordis                    https://cordis.com/
+2. 全文首发 deepseek harness 背后的秘密…   https://zhuanlan.zhihu.com/p/2071…
+3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/…
+```
 
 ### 重定向会先展开
 
@@ -130,6 +148,11 @@ dsh 0.1.5-rc.2、`web` profile、Windows 上实测过。Node 22 和 24 都跑过
 
 想确认某个站点在你这条网络上到底通不通，在仓库里跑 `npm run live`（可只测一个：`npm run live google`）。它会逐个引擎打真实请求，打印条数、耗时和自链数量——`BLOCK` 表示吃到验证码，`FAIL` 表示真连不上。Google 和 Yandex 的解析逻辑，只能在能连到它们的机器上用这条命令验。
 
+如果这个插件帮你把搜索救回来了，点个 star 让下一个撞 401 的人也能搜到它：https://github.com/a1435473620/dsh-web-search-nokey
+
+这是这个仓库唯一想要的回报。别提 issue 说谢谢，把 issue 留给真问题。
+
+
 ## English
 
 ### What it fixes
@@ -178,7 +201,16 @@ Bing(RSS) → Bing(HTML) → Google → Yandex → Baidu → Sogou → DuckDuckG
 Bing has two legs; `bing`, `360`, `haosou` and `ddg` are aliases, so config can
 be written in site names rather than ids.
 
-Roughly 200ms per query, eight results with snippets.
+Roughly 200ms per query, eight results with snippets. One real call looks like this:
+
+```text
+> web_search "cordis plugin lifecycle"
+
+3 results · 502ms
+1. Welcome to Cordis                    https://cordis.com/
+2. 全文首发 deepseek harness 背后的秘密…   https://zhuanlan.zhihu.com/p/2071…
+3. Cordis 教程 | DeepSeek Harness        https://deepseek-harness.github.io/…
+```
 
 ### Redirects are expanded first
 
@@ -267,8 +299,8 @@ Tested on dsh 0.1.5-rc.2, `web` profile, Windows, Node 24 and 22.
 
 To find out whether a given site is reachable on your network, run `npm run live` in the repo (or `npm run live google` for one engine). It hits each engine for real and prints row count, latency and self-link count — `BLOCK` means a captcha, `FAIL` means it genuinely did not connect. The Google and Yandex parsers can only be verified this way on a machine that can reach them.
 
+If this got your search working again, a star is what helps the next person who hits the same 401 find it: [star this repo](https://github.com/a1435473620/dsh-web-search-nokey).
+
 ## License
 
 MIT
-
-如果这个插件帮你把搜索救回来了，顺手点个 star：https://github.com/a1435473620/dsh-web-search-nokey

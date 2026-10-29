@@ -2,7 +2,7 @@
   "name": "dsh-web-search-nokey",
   "displayName": "DSH Web Search (No Key)",
   "version": "1.2.0",
-  "description": "Keyless web search for DeepSeek Harness. Fixes web_search 401 on Trae/WorkBuddy credits setups — no API key needed. Seven sites (Bing, Google, Yandex, Baidu, Sogou, DuckDuckGo, 360) with ordered fallback.",
+  "description": "Keyless web_search for DeepSeek Harness — no API key, 7 engines in fallback order, redirect shells expanded into real URLs. Fixes the 401 on credits-only setups.",
   "license": "MIT",
   "author": "a1435473620",
   "type": "module",
